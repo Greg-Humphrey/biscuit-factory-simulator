@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Team Login</h2>
+
+{% if error %}
+<div class="error-message">
+    {{ error }}
+</div>
+{% endif %}
+
+<form method="post" action="/team-login">
+    <label>Team Name:</label>
+    <input type="text" name="team_name" required>
+
+    <label>3-Digit Code:</label>
+    <input type="password" name="password" required>
+
+    <button type="submit">Login as Team</button>
+</form>
+{% endblock %}

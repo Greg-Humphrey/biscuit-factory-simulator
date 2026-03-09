@@ -1,0 +1,61 @@
+<table id="classperformanceTable">
+            <thead>
+
+            <tr>
+            <th rowspan="2">Team</th>
+
+            <th colspan="5" style="text-align:center;">💰 Financial Performance</th>
+
+            <th colspan="4" style="text-align:center;">🏭 Production Performance</th>
+            </tr>
+
+            <tr>
+            <th onclick="sortTable(1,this)" class="sortable">Profit ⇅</th>
+            <th onclick="sortTable(2,this)" class="sortable">Gross Profit Margin ⇅</th>
+            <th onclick="sortTable(3,this)" class="sortable">Cash ⇅</th>
+            <th onclick="sortTable(4,this)" class="sortable">Remaining Investment ⇅</th>
+            <th onclick="sortTable(5,this)" class="sortable">Overheads ⇅</th>
+            <th onclick="sortTable(6,this)" class="sortable">Total Units Produced ⇅</th>
+            <th onclick="sortTable(7,this)" class="sortable">Total Units Sold ⇅</th>
+            <th onclick="sortTable(8,this)" class="sortable">Units Not Sold ⇅</th>
+            <th onclick="sortTable(9,this)" class="sortable">% Wastage ⇅</th>
+            </tr>
+
+            </thead>
+            <tbody>
+                {% for team in team_financials %}
+                <tr
+                {% if team["id"]|string == (current_team_id|string if current_team_id else "") %}
+                class="my-team"
+                {% endif %}
+                >
+
+                <td>{{ team.name }}</td>
+
+                <!-- Financials -->
+                <td>£{{ team.cumulative_profit | round(0) }}</td>
+                <td>{{ (team.margin * 100) | round(1) }}%</td>
+                <td>£{{ team.cash | round(0) }}</td>
+                <td>£{{ team.remaining_investment | round(0) }}</td>
+                <td>£{{ team.overheads | round(0) }}</td>
+
+                <!-- Production -->
+                <td>{{ team.total_units_produced | round(0) }}</td>
+                <td>{{ team.total_units_sold | round(0) }}</td>
+
+                <td>
+                {{ (team.total_units_produced - team.total_units_sold) | round(0) }}
+                </td>
+
+                <td>
+                {% if team.total_units_produced > 0 %}
+                {{ (((team.total_units_produced - team.total_units_sold) / team.total_units_produced) * 100) | round(1) }}%
+                {% else %}
+                0%
+                {% endif %}
+                </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Team Registration</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <div class="card">
+        <h1>🏭 Biscuit Factory Simulator</h1>
+        <h2>Team Registration</h2>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/register">
+
+            <label>Team Name</label>
+            <input type="text" name="team_name" required>
+
+            <label>3-Digit Password</label>
+            <input type="text" name="password" maxlength="3" required>
+
+            <button type="submit">Create Team</button>
+        </form>
+
+        <div class="link">
+            <a href="/login">Already registered? Login here</a>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
+
+{% endblock %}

@@ -1,0 +1,8 @@
+python -m uvicorn api:app --reload
+
+http://127.0.0.1:8000/
+
+
+Default factory - simulation manager
+
+I am a novice coder, i need clear simple step by step instructions for code changes, i need you to reference the source files and tell me exactly what to remove and what to leave in please.

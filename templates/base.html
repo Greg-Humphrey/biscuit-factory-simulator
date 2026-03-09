@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Biscuit Factory Simulator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- ============================= -->
+    <!-- GLOBAL NAVIGATION BAR -->
+    <!-- This appears on every page -->
+    <!-- ============================= -->
+<nav class="navbar">
+
+    <div class="nav-left">
+        <a href="/">Home</a>
+    </div>
+
+    <div class="nav-right">
+        {% if user %}
+            <span class="logged-in">
+                Logged in as:
+                {% if user.role == "teacher" %}
+                    👩‍🏫 Teacher
+                {% else %}
+                    🧑‍🤝‍🧑 {{ user.team_name }}
+                {% endif %}
+            </span>
+
+            <a href="/logout" class="btn small">Logout</a>
+        {% else %}
+            <a href="/teacher-login">Teacher Login</a>
+            <a href="/team-login">Team Login</a>
+        {% endif %}
+    </div>
+
+</nav>
+
+    <!-- ============================= -->
+    <!-- PAGE CONTENT AREA -->
+    <!-- ============================= -->
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+<script>
+
+function sortTable(columnIndex, header) {
+
+    const table = document.getElementById("classperformanceTable");
+    const tbody = table.tBodies[0];
+    const rows = Array.from(tbody.rows);
+
+    const ascending = header.classList.contains("asc") ? false : true;
+
+    rows.sort((a, b) => {
+
+        let A = a.cells[columnIndex].innerText.replace(/[£,%]/g,"");
+        let B = b.cells[columnIndex].innerText.replace(/[£,%]/g,"");
+
+        A = parseFloat(A);
+        B = parseFloat(B);
+
+        return ascending ? A - B : B - A;
+
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+
+    // Reset all headers
+    document.querySelectorAll("#classperformanceTable th.sortable").forEach(th => {
+        th.classList.remove("asc","desc");
+        th.innerHTML = th.innerHTML.replace(" ▲","").replace(" ▼","").replace(" ⇅","");
+        th.innerHTML = th.innerHTML + " ⇅";
+    });
+
+    // Set current header indicator
+    header.classList.remove("asc","desc");
+    header.classList.add(ascending ? "asc" : "desc");
+
+    header.innerHTML = header.innerHTML.replace(" ⇅","") + (ascending ? " ▲" : " ▼");
+
+}
+
+/* =================================
+   GLOBAL MODAL FUNCTIONS
+================================ */
+
+function showGlobalModal(title, message, confirmCallback){
+
+    const modal = document.getElementById("globalModal");
+    const titleBox = document.getElementById("modalTitle");
+    const messageBox = document.getElementById("modalMessage");
+    const confirmBtn = document.getElementById("modalConfirmBtn");
+
+    titleBox.innerText = title;
+    messageBox.innerText = message;
+
+    modal.style.display = "flex";
+
+    confirmBtn.onclick = function(){
+        closeGlobalModal();
+        if(confirmCallback){
+            confirmCallback();
+        }
+    };
+
+}
+
+function closeGlobalModal(){
+    document.getElementById("globalModal").style.display = "none";
+}
+
+</script>
+
+<!-- ================================= -->
+<!-- GLOBAL MODAL SYSTEM -->
+<!-- ================================= -->
+
+<div id="globalModal" class="error-overlay" style="display:none;">
+
+    <div class="error-modal">
+
+        <h2 id="modalTitle"></h2>
+
+        <p id="modalMessage"></p>
+
+        <div style="margin-top:20px;">
+            <button id="modalConfirmBtn" class="btn teacher">
+                Confirm
+            </button>
+
+            <button onclick="closeGlobalModal()" class="btn secondary">
+                Cancel
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

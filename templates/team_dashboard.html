@@ -1,0 +1,624 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>👩‍🍳 Team Dashboard</h1>
+
+<p>Welcome <strong>{{ team_name }}</strong></p>
+
+{% if active_session %}
+
+    <p><strong>Session Status:</strong> {{ active_session[2] }}</p>
+
+    <!-- ================================= -->
+    <!-- SETUP PHASE -->
+    <!-- ================================= -->
+    {% if active_session[2] == "setup" %}
+
+        {% if not meta.get("setup_complete") %}
+            <a href="/factory-setup">
+                <button class="btn">🏭 Build Your Factory</button>
+            </a>
+        {% else %}
+            <p style="color: green;">✅ Setup Submitted</p>
+        {% endif %}
+
+    {% endif %}
+
+
+    <!-- ================================= -->
+    <!-- FACTORY + PERFORMANCE DATA -->
+    <!-- ================================= -->
+    {% if simulation and simulation.get("factory") %}
+
+        {% set factory = simulation.get("factory", {}) %}
+
+        <hr>
+
+        <!-- ================================= -->
+        <!-- DROP DOWN 1 - INVESTMENT BREAKDOWN -->
+        <!-- ================================= -->
+        <details>
+        <summary><strong>📊 Investment Breakdown</strong></summary>
+
+        <table class="performance-style">
+
+        <thead>
+        <tr>
+        <th></th>
+        <th style="text-align:right;">Value</th>
+        </tr>
+        </thead>
+
+        <tbody>
+
+        <tr>
+        <td>Capital Raised</td>
+        <td style="text-align:right;">
+        £{{ simulation.get("starting_cash",0) | round(0) }}
+        </td>
+        </tr>
+
+        <tr>
+        <td>Capital Spent</td>
+        <td style="text-align:right;">
+        £{{ simulation.get("total_initial_investment",0) | round(0) }}
+        </td>
+        </tr>
+
+        <tr>
+        <td>Capital Unused</td>
+        <td style="text-align:right;">
+        £{{ simulation.get("unused_capital",0) | round(0) }}
+        </td>
+        </tr>
+
+        <tr>
+        <td>Capital Still to Repay</td>
+        <td style="text-align:right;">
+        £{{ simulation.get("investment_outstanding",0) | round(0) }}
+        </td>
+        </tr>
+
+        </tbody>
+
+        </table>
+
+        </details>
+
+        <!-- ================================= -->
+        <!-- DROP DOWN 2 - FACTORY BREAKDOWN -->
+        <!-- ================================= -->
+        
+        {% set factory = simulation.get("factory", {}) %}
+        {% set costs = simulation.get("factory_cost_breakdown", {}) %}
+        <details>
+        <summary><strong>🏭 Factory Breakdown</strong></summary>
+
+        <table class="performance-style">
+
+        <thead>
+        <tr>
+        <th></th>
+        <th>Decision</th>
+        <th style="text-align:right;">Cost</th>
+        </tr>
+        </thead>
+
+        <tbody>
+
+        <tr>
+        <td>Factory Build</td>
+        <td></td>
+        <td style="text-align:right;">£{{ simulation.get("build_cost", 0) | round(0) }}</td>
+        </tr>
+
+        <tr>
+        <td>Production Lines</td>
+        <td>
+
+        {% set counts = {} %}
+        {% for line in factory.get("lines", []) %}
+            {% set t = line.get("process_type") %}
+            {% set _ = counts.update({t: counts.get(t, 0) + 1}) %}
+        {% endfor %}
+
+        {% for process, count in counts.items() %}
+        <div>
+        {{ count }} × {{ process | capitalize }}
+        </div>
+        {% endfor %}
+
+        </td>
+
+        <td style="text-align:right;">£{{ simulation.get("machinery_cost", 0) | round(0) }}</td>
+        </tr>
+
+        <tr>
+        <td>Utilities Setup</td>
+        <td></td>
+        <td style="text-align:right;">£{{ costs.get("utilities_cost",0) | round(0) }}</td>
+        </tr>
+
+        <tr>
+        <td>Quality System Setup</td>
+        <td>{{ simulation.get("initial_quality_system") | upper }}</td>
+        <td style="text-align:right;">£{{ simulation.get("quality_setup_cost", 0) | round(0) }}</td>
+        </tr>
+
+        <tr>
+        <td>Factory Dimensions</td>
+        <td>
+        <div>{{ factory.get("length_m",0) }}m × {{ factory.get("width_m",0) }}m</div>
+        <div>({{ factory.get("total_space_m2",0) }} m²)</div>
+        </td>
+        <td></td>
+        </tr>
+
+        <tr>
+        <td>Wall Blocks</td>
+        <td>
+        <div>Small: {{ factory.get("wall_blocks_used", {}).get("small", 0) }}</div>
+        <div>Medium: {{ factory.get("wall_blocks_used", {}).get("medium", 0) }}</div>
+        <div>Large: {{ factory.get("wall_blocks_used", {}).get("large", 0) }}</div>
+        </td>
+        <td style="text-align:right;">£{{ costs.get("wall_cost",0) | round(0) }}</td>
+        </tr>
+
+        <tr>
+        <td>Fixtures</td>
+        <td>
+        <div>Industrial Doors: {{ factory.get("fixtures", {}).get("industrial_door", 0) }}</div>
+        <div>Pedestrian Doors: {{ factory.get("fixtures", {}).get("pedestrian_door", 0) }}</div>
+        <div>Windows: {{ factory.get("fixtures", {}).get("window", 0) }}</div>
+        </td>
+        <td style="text-align:right;">£{{ costs.get("fixtures_cost",0) | round(0) }}</td>
+        </tr>
+
+        <tr>
+        <td>Floor Slabs</td>
+        <td>{{ factory.get("floor_slabs_purchased", 0) }} slabs</td>
+        <td style="text-align:right;">£{{ costs.get("floor_cost",0) | round(0) }}</td>
+        </tr>
+
+        <tr>
+        <td>Roof Panels</td>
+        <td>{{ factory.get("roof_panels_purchased", 0) }} panels</td>
+        <td style="text-align:right;">£{{ costs.get("roof_cost",0) | round(0) }}</td>
+        </tr>
+
+        <tr>
+        <td>Current Quality System</td>
+        <td>{{ (simulation.get("current_quality_system") or factory.get("quality_system") or "None") | upper }}</td>
+        <td></td>
+        </tr>
+
+        </tbody>
+
+        </table>
+
+        </details>
+
+        <!-- ================================= -->
+        <!-- DROP DOWN 3 - FACTORY PERFORMANCE -->
+        <!-- ================================= -->
+        <details>
+            <summary><strong>📈 Factory Performance</strong></summary>
+
+            {% if team_financials %}
+                {% include "components/team_performance_table.html" %}
+            {% else %}
+                <p>No performance data yet.</p>
+            {% endif %}
+        </details>
+
+
+        <!-- ================================= -->
+        <!-- DROP DOWN 4+ - MONTHLY HISTORY -->
+        <!-- ================================= -->
+        {% for month in simulation.get("history", []) %}
+            <details>
+                <summary><strong>📅 Month {{ month.month }} Performance - {{ month.scenario }} </strong></summary>
+
+                <ul>
+                    <li><strong>Units Produced:</strong> {{ month.units_produced }}</li>
+                    <li><strong>Units Sold:</strong> {{ month.units_sold }}</li>
+                    <li><strong>Revenue:</strong> £{{ month.revenue | round(0) }}</li>
+                    <li>
+                    <strong>Total Cost:</strong> £{{ month.total_cost | round(0) }}
+
+                    {% if month.cost_breakdown %}
+
+                    <ul style="margin-left:20px; font-size:0.95em; color:#555;">
+
+                    <li>Ingredients: £{{ month.cost_breakdown.ingredients | round(0) }}</li>
+                    <li>Labour: £{{ month.cost_breakdown.labour | round(0) }}</li>
+                    <li>Monthly Utilities: £{{ month.cost_breakdown.monthly_utilities | round(0) }}</li>
+                    <li>Changeover: £{{ month.cost_breakdown.changeover | round(0) }}</li>
+                    <li>Shipping: £{{ month.cost_breakdown.shipping | round(0) }}</li>
+                    <li>Quality System: £{{ month.cost_breakdown.quality_system | round(0) }}</li>
+                    <li>Machine Breakdown: £{{ month.cost_breakdown.machine_breakdown | round(0) }}</li>
+                    <li>Employee Strike: £{{ month.cost_breakdown.employee_strike | round(0) }}</li>
+                    <li>Extra Fixed Cost: £{{ month.cost_breakdown.extra_fixed_cost | round(0) }}</li>
+                    <li>Quality System Change: £{{ month.cost_breakdown.quality_system_change_cost | round(0) }}</li>
+
+                    </ul>
+
+                    {% endif %}
+
+                    <li>
+                        <strong>Profit:</strong>
+                        {% if month.profit >= 0 %}
+                            <span style="color: green;">£{{ month.profit | round(0) }}</span>
+                        {% else %}
+                            <span style="color: red;">£{{ month.profit | round(0) }}</span>
+                        {% endif %}
+                    </li>
+
+                    <li><strong>Cash:</strong> £{{ month.cash | round(0) }}</li>
+
+                    <li><strong>Remaining Investment:</strong>
+                        £{{ month.remaining_investment_to_recover | round(0) }}
+                    </li>
+                </ul>
+            </details>
+        {% endfor %}
+
+    {% endif %}
+
+    <!-- ================================= -->
+    <!-- COMPETETIVE MODE -->
+    <!-- ================================= -->
+
+    {% if competitive_mode %}
+
+    <hr>
+
+    <details>
+    <summary><strong>🏆 Class Performance</strong></summary>
+    {% include "components/class_performance_table.html" %}
+    </details>
+
+{% endif %}
+
+<!-- ================================= -->
+<!-- ACTIVE PHASE - MONTHLY DECISIONS -->
+<!-- ================================= -->
+
+{% if decision_errors %}
+<div id="errorOverlay" class="error-overlay">
+
+    <div class="error-modal">
+
+        <h2>⚠ Production Plan Invalid</h2>
+
+        <p>The following issues were found:</p>
+
+        <ul>
+        {% for error in decision_errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+        </ul>
+
+        <button onclick="closeErrorModal()">Close</button>
+
+    </div>
+
+</div>
+
+<script>
+function closeErrorModal() {
+    document.getElementById("errorOverlay").style.display = "none";
+}
+</script>
+{% endif %}
+
+{% if simulation and active_session[2] == "active" %}
+
+<hr>
+
+{% set factory = simulation.get("factory", {}) %}
+{% if form_production_plan %}
+{% set production_plan = form_production_plan %}
+{% else %}
+{% set production_plan = simulation.get("production_plan", {}) %}
+{% endif %}
+
+<details open>
+    <summary><strong>📅 Month {{ active_session[3] }} Decisions</strong></summary>
+
+    {% set current_month = active_session[3] %}
+    {% set submitted_month = meta.get("decision_month") %}
+    {% set is_locked = (meta.get("submitted") and submitted_month == current_month) or active_session[2] == "finished" %}
+
+    {% if is_locked %}
+    <p style="color:green;">✅ Decisions submitted for this month</p>
+    {% endif %}
+    <form method="post" action="/submit-decisions">
+
+        <!-- Quality Selection -->
+        <label><strong>Quality System</strong></label>
+
+        <select name="quality_system"
+        {% if is_locked %}disabled{% endif %}>
+            <option value="qc" {% if factory.get("quality_system") == "qc" %}selected{% endif %}>QC</option>
+            <option value="qa" {% if factory.get("quality_system") == "qa" %}selected{% endif %}>QA</option>
+            <option value="tqm" {% if factory.get("quality_system") == "tqm" %}selected{% endif %}>TQM</option>
+        </select>
+
+        <hr>
+        
+        <!-- Production lines -->
+        <h3>Production Plan</h3>
+
+        <table class="performance-style">
+        <thead>
+        <tr>
+        <th>Process</th>
+        <th>Production Runs</th>
+        </tr>
+        </thead>
+
+        <tbody>
+
+        {% for line in factory.get("lines", []) %}
+        {% set line_index = loop.index0 %}
+        <input type="hidden" name="line_{{ line_index }}_exists" value="1">
+        {% set previous_runs = production_plan.get(line_index, []) %}
+        {% set limits = process_limits[line_index] %}
+
+        {% set min_units = limits["min_units_per_month"] %}
+        {% set max_units = limits["max_units_per_month"] %}
+        {% set min_k = (min_units // 1000) %}
+        {% set max_k = (max_units // 1000) %}
+
+        <td style="vertical-align:top;">
+        <strong>
+        {{ line.get("process_type") | capitalize }}
+        ({{ min_k }}k–{{ max_k }}k units)
+        </strong>
+
+        {% if not is_locked %}
+        <br>
+        <button type="button"
+        class="add-run-btn"
+        data-line-index="{{ line_index }}">
+        + Add Run
+        </button>
+        {% endif %}
+
+        </td>
+
+        <td>
+
+        <div id="line-{{ line_index }}-runs"
+            class="line-run-container"
+            data-line-index="{{ line_index }}"
+            data-min-units="{{ min_units }}"
+            data-max-units="{{ max_units }}">
+
+        {% for run in previous_runs %}
+        <div class="run-row">
+
+        <select name="line_{{ line_index }}_biscuit_{{ loop.index0 }}"
+        {% if is_locked %}disabled{% endif %}>
+        {% for biscuit in biscuit_list %}
+        <option value="{{ biscuit }}"
+        {% if biscuit == run.biscuit %}selected{% endif %}>
+        {{ biscuit }}
+        </option>
+        {% endfor %}
+        </select>
+
+        <input type="number"
+        name="line_{{ line_index }}_units_{{ loop.index0 }}"
+        value="{{ run.units }}"
+        min="0"
+        data-min-units="{{ min_units }}"
+        class="production-units"
+        {% if is_locked %}readonly{% endif %}>
+
+        {% if not is_locked %}
+        <button type="button"
+        class="remove-run-btn"
+        data-line-index="{{ line_index }}">
+        ❌
+        </button>
+        {% endif %}
+
+        </div>
+        {% endfor %}
+
+        </div>
+        <div class="line-warning"
+            id="line-warning-{{ line_index }}"
+            style="color:red; display:none; font-size:0.9em; margin-top:5px;">
+
+        ⚠ Total production for this line must be between {{ min_k }}k and {{ max_k }}k units.
+
+        </div>
+        </td>
+
+
+        </tr>
+
+        {% endfor %}
+
+        </tbody>
+        </table>
+
+        {% if not is_locked and active_session[2] == "active" %}
+        <button type="submit" class="btn">
+            ✅ Submit Production Plan
+        </button>
+        {% endif %}
+
+    </form>
+</details>
+
+<!-- Biscuit options stored safely in hidden select -->
+<select id="biscuit-options-template" style="display:none;">
+    {% for biscuit in biscuit_list %}
+        <option value="{{ biscuit }}">{{ biscuit }}</option>
+    {% endfor %}
+</select>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    document.querySelectorAll(".line-run-container").forEach(container => {
+
+        const lineIndex = container.dataset.lineIndex;
+
+        const inputs = container.querySelectorAll("input[type='number']");
+
+        inputs.forEach(input => {
+
+            input.addEventListener("input", function() {
+
+                validateLine(lineIndex);
+
+            });
+
+        });
+
+    });
+
+    // Add Run Buttons
+    document.querySelectorAll(".add-run-btn").forEach(function(button) {
+        button.addEventListener("click", function() {
+            const lineIndex = this.dataset.lineIndex;
+            addRun(lineIndex);
+        });
+    });
+
+    // Remove Run Buttons
+    document.addEventListener("click", function(e) {
+        if (e.target.classList.contains("remove-run-btn")) {
+            const lineIndex = e.target.dataset.lineIndex;
+            removeRun(e.target, lineIndex);
+        }
+    });
+});
+
+function addRun(lineIndex) {
+
+    const container = document.getElementById("line-" + lineIndex + "-runs");
+    const runCount = container.children.length;
+
+    const div = document.createElement("div");
+    div.className = "run-row";
+
+    const template = document.getElementById("biscuit-options-template");
+    const select = template.cloneNode(true);
+
+    select.removeAttribute("id");
+    select.style.display = "";
+    select.name = "line_" + lineIndex + "_biscuit_" + runCount;
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.name = "line_" + lineIndex + "_units_" + runCount;
+    input.value = "0";
+    input.min = "0";
+    input.className = "production-units";
+    input.addEventListener("input", function() {
+        validateLine(lineIndex);
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.innerText = "❌";
+    removeBtn.className = "remove-run-btn";
+    removeBtn.dataset.lineIndex = lineIndex;
+
+    div.appendChild(select);
+    div.appendChild(input);
+    const warning = document.createElement("div");
+    warning.className = "unit-warning";
+    warning.style.color = "red";
+    warning.style.display = "none";
+    warning.style.fontSize = "0.9em";
+    warning.innerText = "⚠ This line must produce more units for this process.";
+
+    div.appendChild(warning);
+    div.appendChild(removeBtn);
+
+    container.appendChild(div);
+    const newInput = div.querySelector("input");
+
+    if (newInput) {
+
+        newInput.addEventListener("input", function() {
+
+            validateLine(lineIndex);
+
+        });
+
+    }
+}
+
+function validateLine(lineIndex) {
+
+    const container = document.getElementById("line-" + lineIndex + "-runs");
+
+    if (!container) return;
+
+    const minUnits = parseFloat(container.dataset.minUnits);
+    const maxUnits = parseFloat(container.dataset.maxUnits);
+
+    const inputs = container.querySelectorAll("input[type='number']");
+
+    let total = 0;
+
+    inputs.forEach(input => {
+
+        const value = parseFloat(input.value);
+
+        if (!isNaN(value)) {
+            total += value;
+        }
+
+    });
+
+    const warning = document.getElementById("line-warning-" + lineIndex);
+
+    if (!warning) return;
+
+    if (total > 0 && (total < minUnits || total > maxUnits)) {
+
+        warning.style.display = "block";
+
+    } else {
+
+        warning.style.display = "none";
+
+    }
+}
+
+function removeRun(button, lineIndex) {
+
+    const row = button.closest(".run-row");
+    const container = document.getElementById("line-" + lineIndex + "-runs");
+
+    container.removeChild(row);
+
+    const rows = container.getElementsByClassName("run-row");
+
+    for (let i = 0; i < rows.length; i++) {
+
+        const select = rows[i].querySelector("select");
+        const input = rows[i].querySelector("input");
+
+        select.name = "line_" + lineIndex + "_biscuit_" + i;
+        input.name = "line_" + lineIndex + "_units_" + i;
+    }
+    validateLine(lineIndex);
+}
+</script>
+
+{% endif %}   {# closes active phase if #}
+
+{% endif %}   {# closes outer if active_session #}
+
+{% endblock %}

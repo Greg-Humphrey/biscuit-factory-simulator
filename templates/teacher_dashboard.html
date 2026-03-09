@@ -1,0 +1,577 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>👩‍🏫 Teacher Dashboard</h1>
+
+<!-- ================================= -->
+<!-- SIMULATION SESSION (UNCHANGED) -->
+<!-- ================================= -->
+
+<div class="card large-card">
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Simulation Session</h2>
+
+        {% if active_session %}
+        <div>
+
+            {% if active_session[2] == "active" %}
+
+            <form method="post" action="/end-session" style="display:inline;">
+                <button type="button"
+                        class="btn secondary"
+                        onclick="confirmEndSession()">
+                    🛑 End Session Early
+                </button>
+            </form>
+
+            {% endif %}
+            <form method="post" action="/delete-session" style="display:inline;">
+                <button type="button"
+                        class="btn secondary"
+                        onclick="confirmDeleteSession()">
+                    🗑 Delete Session
+                </button>
+            </form>
+            {% if active_session[2] == "finished" %}
+
+            {% if not competitive_mode %}
+
+            <form method="post"
+                action="/make-competitive"
+                style="display:inline;">
+            <button type="button"
+                    class="btn teacher"
+                    onclick="confirmCompetitive()">
+                🏆 Make This Competitive
+            </button>
+
+            </form>
+
+            {% else %}
+
+            <button class="btn teacher" disabled>
+            🏆 This Is Now Competitive
+            </button>
+
+            {% endif %}
+
+            <form method="post" action="/create-pdfs" style="display:inline;">
+            <button type="submit" class="btn teacher">
+            📄 Create PDFs
+            </button>
+            </form>
+
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    {% if missing_teams %}
+        <div style="background-color: #ffe6e6; padding: 10px; margin-bottom: 15px; border-radius: 5px;">
+            <strong>⚠ Cannot advance month.</strong>
+            <ul>
+                {% for team in missing_teams %}
+                    <li>{{ team }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if active_session %}
+
+        <p><strong>Name:</strong> {{ active_session[1] }}</p>
+        <p>
+        <strong>Current Month:</strong> {{ active_session[3] }}
+
+        {% if active_session[2] == "active" %}
+        <span style="margin-left:10px; font-weight:bold;">
+        (
+        <span style="color:green;">{{ submitted_count }}</span>
+        <span style="color:#888;">of</span>
+        <span style="color:#555;">{{ total_teams }}</span>
+        teams submitted production plans
+        )
+        </span>
+        {% endif %}
+        </p>
+        <p><strong>Total Months:</strong> {{ active_session[4] }}</p>
+        <p><strong>Status:</strong> {{ active_session[2] }}</p>
+        <p><strong>Registered Teams:</strong> {{ team_count }}</p>
+
+        {% if active_session[2] == "setup" %}
+            <form method="post" action="/end-setup-phase" style="margin-top: 15px;">
+                <button type="submit" class="btn">
+                    🚀 End Setup Phase & Start Month 1
+                </button>
+            </form>
+        {% endif %}
+
+        {% if active_session[2] == "active" %}
+            <form method="post"
+                action="/advance-month"
+                style="margin-top:15px;"
+                id="advanceForm"
+                data-missing='{{ popup_missing_teams | tojson }}'
+                data-month="{{ current_month }}">
+
+                {% if current_month < total_months %}
+                    <button type="button" class="btn teacher" onclick="confirmAdvance()">
+                        ➡ Advance Month
+                    </button>
+                {% else %}
+                    <button type="button" class="btn teacher" onclick="confirmAdvance()">
+                        ➡ Advance Month & End Session
+                    </button>
+                {% endif %}
+
+            </form>
+        {% endif %}
+
+    {% else %}
+
+        <h3>Create New Session</h3>
+
+        <form method="post" action="/create-session">
+            <input type="text" name="session_name" placeholder="Session name" required>
+            <input type="number" name="total_months" placeholder="Total months" min="1" required>
+            <button type="submit">Start Session</button>
+        </form>
+
+    {% endif %}
+</div>
+
+
+{% if active_session %}
+
+<hr>
+
+<!-- ================================= -->
+<!-- DROP DOWN 1 - REGISTERED TEAMS -->
+<!-- ================================= -->
+<details>
+    <summary><strong>👥 Registered Teams</strong></summary>
+
+    {% if teams %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Team Name</th>
+                    <th>Password</th>
+                    <th>Status</th>
+                    <th>Factory Result</th>
+                    <th>Rename</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for team_id, team_name, password, auto_built in teams %}
+                <tr>
+                    <td>{{ team_name }}</td>
+                    <td>{{ password }}</td>
+
+                    <td>
+                        {% if active_session[2] == "setup" %}
+                            {% if team_name in submitted_teams %}
+                                <span style="color: green;">✅ Submitted</span>
+                            {% else %}
+                                <span style="color: red;">❌ Not Submitted</span>
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if active_session[2] != "setup" %}
+                            {% if auto_built %}
+                                <span style="color: orange;">⚙ Auto-built</span>
+                            {% else %}
+                                <span style="color: green;">🏗 Built by Team</span>
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <form method="post" action="/rename-team" class="inline-form">
+                            <input type="hidden" name="team_id" value="{{ team_id }}">
+                            <input type="text" name="new_name" placeholder="New name" required>
+                            <button type="submit">Update</button>
+                        </form>
+                    </td>
+
+                    <td>
+                        <form method="post" action="/delete-team/{{ team_id }}">
+                            <button type="button"
+                                    class="btn secondary"
+                                    onclick="confirmDeleteTeam(this)">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No teams registered yet.</p>
+    {% endif %}
+</details>
+
+
+<!-- ================================= -->
+<!-- DROP DOWN 2 - MONTHLY SCENARIOS -->
+<!-- ================================= -->
+<details>
+    <summary><strong>🌍 Monthly Scenarios</strong></summary>
+
+    {% for month in range(1, total_months + 1) %}
+
+        {% set scenario = scenarios[month|string] %}
+        {% set locked = month < current_month %}
+
+        <details style="margin-top: 10px;">
+            <summary>
+                <strong>
+                    Month {{ month }} - {{ scenario.name }}
+                    {% if locked %} 🔒 {% endif %}
+                </strong>
+            </summary>
+
+            <form method="post" action="/update-scenario">
+
+                <input type="hidden" name="month" value="{{ month }}">
+
+                <label>Scenario Name</label>
+                <input type="text" name="name"
+                    value="{{ scenario.name }}"
+                    {% if locked %}readonly{% endif %}>
+
+                <h4>Scrap Rates</h4>
+
+                {% for quality in ['qc', 'qa', 'tqm'] %}
+                <label>{{ quality.upper() }}</label>
+                <input type="number" step="0.01"
+                    name="scrap_{{ quality }}"
+                    value="{{ scenario.scrap_rate[quality] }}"
+                    {% if locked %}readonly{% endif %}>
+                {% endfor %}
+
+                <h4>Multipliers</h4>
+
+                <label>Ingredient Multiplier</label>
+                <input type="number" step="0.01"
+                    name="ingredient_multiplier"
+                    value="{{ scenario.ingredient_multiplier }}"
+                    {% if locked %}readonly{% endif %}>
+
+                <label>Shipping Multiplier</label>
+                <input type="number" step="0.01"
+                    name="shipping_multiplier"
+                    value="{{ scenario.shipping_multiplier }}"
+                    {% if locked %}readonly{% endif %}>
+
+                <label>Sales Price Multiplier</label>
+                <input type="number" step="0.01"
+                    name="sales_price_multiplier"
+                    value="{{ scenario.sales_price_multiplier }}"
+                    {% if locked %}readonly{% endif %}>
+
+                <label>Demand Multiplier</label>
+                <input type="number" step="0.01"
+                    name="demand_multiplier"
+                    value="{{ scenario.demand_multiplier }}"
+                    {% if locked %}readonly{% endif %}>
+
+                <label>Extra Fixed Cost</label>
+                <input type="number"
+                    name="extra_fixed_cost"
+                    value="{{ scenario.extra_fixed_cost }}"
+                    {% if locked %}readonly{% endif %}>
+
+                <label>Machine Breakdown Cost per 10,000 Units</label>
+                <input type="number"
+                    name="machine_breakdown"
+                    value="{{ scenario.machine_breakdown }}"
+                    {% if locked %}readonly{% endif %}>
+
+                <label>Employee Strike Cost per 10% Labour Intensity</label>
+                <input type="number"
+                    name="employee_strike"
+                    value="{{ scenario.employee_strike }}"
+                    {% if locked %}readonly{% endif %}>
+
+                {% if not locked %}
+                    <button type="submit" class="btn">
+                        Save Month {{ month }}
+                    </button>
+                {% else %}
+                    <p style="color: gray;">Month locked.</p>
+                {% endif %}
+
+            </form>
+        </details>
+
+    {% endfor %}
+
+</details>
+
+
+<!-- ================================= -->
+<!-- DROP DOWN 3 - INVESTMENT BREAKDOWN -->
+<!-- ================================= -->
+<details>
+    <summary><strong>📊 Investment Breakdown (All Teams)</strong></summary>
+
+    {% if team_financials %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Team</th>
+                    <th>Initial Investment</th>
+                    <th>Unused Capital</th>
+                    <th>Remaining Investment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for team in team_financials %}
+                <tr>
+                    <td>{{ team.name }}</td>
+                    <td>£{{ team.initial_investment | round(0) }}</td>
+                    <td>£{{ team.unused_capital | round(0) }}</td>
+                    <td>£{{ team.remaining_investment | round(0) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No financial data yet.</p>
+    {% endif %}
+</details>
+
+<!-- ================================= -->
+<!-- DROP DOWN 4 - FACTORY PERFORMANCE -->
+<!-- ================================= -->
+<details>
+    <summary><strong>📈 Factory Performance (All Teams)</strong></summary>
+
+    {% if team_financials %}
+        {% include "components/class_performance_table.html" %}
+    {% else %}
+        <p>No performance data yet.</p>
+    {% endif %}
+</details>
+
+<!-- ================================= -->
+<!-- DROP DOWN 5 - MONTH 1 PLACEHOLDER -->
+<!-- ================================= -->
+<hr>
+
+<h2>Monthly Results</h2>
+
+{% for month in range(1, total_months + 1) %}
+
+<details>
+{% set scenario = scenarios[month|string] %}
+<summary><strong>📅 Month {{ month }} Performance - {{ scenario.name }}</strong></summary>
+
+{% if month == current_month and active_session[2] != "finished" %}
+
+<h4>Submission Status</h4>
+
+<table>
+<thead>
+<tr>
+<th>Team</th>
+<th>Submitted</th>
+</tr>
+</thead>
+<tbody>
+
+{% for team_id, team_name, password, auto_built in teams %}
+
+<tr>
+<td>{{ team_name }}</td>
+
+<td>
+{% if team_name in submitted_teams %}
+<span style="color:green;">✅ Submitted</span>
+{% else %}
+<span style="color:red;">❌ Not Submitted</span>
+{% endif %}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+</table>
+
+{% else %}
+
+<h4>Monthly Performance</h4>
+
+<table>
+<thead>
+<tr>
+<th>Team</th>
+<th>Auto Submitted</th>
+<th>Produced</th>
+<th>Sold</th>
+<th>Revenue</th>
+<th>Total Cost</th>
+<th>Profit</th>
+</tr>
+</thead>
+<tbody>
+
+{% for row in monthly_results.get(month, []) %}
+
+<tr>
+
+<td>{{ row.team }}</td>
+
+<td>
+{% if row.auto_submitted %}
+⚙ Auto
+{% else %}
+—
+{% endif %}
+</td>
+
+<td>{{ row.units_produced }}</td>
+<td>{{ row.units_sold }}</td>
+<td>£{{ row.revenue | round(0) }}</td>
+<td>£{{ row.total_cost | round(0) }}</td>
+
+<td>
+{% if row.profit >= 0 %}
+<span style="color:green;">£{{ row.profit | round(0) }}</span>
+{% else %}
+<span style="color:red;">£{{ row.profit | round(0) }}</span>
+{% endif %}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+</table>
+
+{% endif %}
+
+</details>
+
+{% endfor %}
+
+{% endif %}
+
+<script>
+
+function confirmAdvance() {
+
+    const form = document.getElementById("advanceForm");
+
+    if (!form) {
+        return;
+    }
+
+    const missingTeams = JSON.parse(form.dataset.missing || "[]");
+    const currentMonth = parseInt(form.dataset.month);
+
+    // Month 1 → backend controls validation
+    if (currentMonth === 1) {
+        form.submit();
+        return;
+    }
+
+    // If no teams missing → advance immediately
+    if (missingTeams.length === 0) {
+        form.submit();
+        return;
+    }
+
+    // Build readable list
+    let message = "The following teams have NOT submitted production plans:\n\n";
+
+    missingTeams.forEach(team => {
+        message += "• " + team + "\n";
+    });
+
+    message += "\nAdvance month anyway?";
+
+    showGlobalModal(
+        "Advance Month",
+        message,
+        function(){
+            form.submit();
+        }
+    );
+
+}
+
+function confirmEndSession(){
+
+    const form = document.querySelector('form[action="/end-session"]');
+
+    showGlobalModal(
+        "End Session Early",
+        "This will run the current month simulation and immediately end the session.\n\nContinue?",
+        function(){
+            form.submit();
+        }
+    );
+
+}
+
+function confirmDeleteSession(){
+
+    const form = document.querySelector('form[action="/delete-session"]');
+
+    showGlobalModal(
+        "Delete Simulation Session",
+        "This will permanently delete the entire simulation session and ALL teams.\n\nThis cannot be undone.",
+        function(){
+            form.submit();
+        }
+    );
+
+}
+
+function confirmDeleteTeam(button){
+
+    const form = button.closest("form");
+
+    showGlobalModal(
+        "Delete Team",
+        "Are you sure you want to delete this team?",
+        function(){
+            form.submit();
+        }
+    );
+
+}
+
+function confirmCompetitive(){
+
+    const form = document.querySelector('form[action="/make-competitive"]');
+
+    showGlobalModal(
+        "Enable Competitive Mode",
+        "Competitive mode reveals the class leaderboard and rankings.\n\nThis cannot be undone.\n\nEnable competitive mode?",
+        function(){
+            form.submit();
+        }
+    );
+
+}
+
+</script>
+
+{% endblock %}

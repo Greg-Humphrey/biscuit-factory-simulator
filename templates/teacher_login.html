@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Teacher Login</h2>
+
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+
+<form method="post" action="/teacher-login">
+    <!-- Hidden field so teacher always logs in as 'teacher' -->
+    <input type="hidden" name="team_name" value="teacher">
+
+    <label>Teacher Password:</label>
+    <input type="password" name="password" required>
+
+    <button type="submit">Login as Teacher</button>
+</form>
+{% endblock %}

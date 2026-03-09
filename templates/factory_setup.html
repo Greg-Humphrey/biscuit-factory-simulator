@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if errors %}
+<div id="errorOverlay" class="error-overlay">
+
+    <div class="error-modal">
+
+        <h2>⚠ Factory cannot be built</h2>
+
+        <p>The following items are not sufficient:</p>
+
+        <ul>
+        {% for error in errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+        </ul>
+
+        <button onclick="closeErrorModal()">Close</button>
+
+    </div>
+
+</div>
+
+<script>
+
+function closeErrorModal() {
+    document.getElementById("errorOverlay").style.display = "none";
+}
+
+</script>
+
+{% endif %}
+
+<style>
+.form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.form-row label {
+    width: 220px;   /* aligns all inputs */
+    font-weight: 500;
+}
+
+.form-row input,
+.form-row select {
+    flex: 1;
+    padding: 6px;
+}
+</style>
+
+<div class="container">
+
+    <h1>🏭 Factory Set Up</h1>
+
+    <form method="post" action="/factory-setup">
+
+        <!-- Starting Cash -->
+        <div class="card large-card">
+            <h2>Starting Cash</h2>
+
+            <div class="form-row">
+                <label>Investment Requested (£)</label>
+                <input type="number" name="starting_cash" min="0"
+                value="{{ form_data.starting_cash if form_data else 0 }}" required>
+            </div>
+        </div>
+
+
+        <!-- Factory Dimensions -->
+        <div class="card large-card">
+            <h2>Factory Dimensions</h2>
+
+            <div class="form-row">
+                <label>Length (metres)</label>
+                <input type="number" name="length_m" min="1"
+                value="{{ form_data.factory.length_m if form_data else '' }}" required>
+            </div>
+
+            <div class="form-row">
+                <label>Width (metres)</label>
+                <input type="number" name="width_m" min="1"
+                value="{{ form_data.factory.width_m if form_data else '' }}" required>
+            </div>
+        </div>
+
+
+        <!-- Wall Blocks -->
+        <div class="card large-card">
+            <h2>Wall Blocks</h2>
+
+            <div class="form-row">
+                <label>Small Blocks</label>
+                <input type="number" name="wall_small" min="0"
+                value="{{ form_data.factory.wall_blocks.small if form_data else 0 }}">
+            </div>
+
+            <div class="form-row">
+                <label>Medium Blocks</label>
+                <input type="number" name="wall_medium" min="0"
+                value="{{ form_data.factory.wall_blocks.medium if form_data else 0 }}">
+            </div>
+
+            <div class="form-row">
+                <label>Large Blocks</label>
+                <input type="number" name="wall_large" min="0"
+                value="{{ form_data.factory.wall_blocks.large if form_data else 0 }}">
+            </div>
+        </div>
+
+
+        <!-- Fixtures -->
+        <div class="card large-card">
+            <h2>Fixtures</h2>
+
+            <div class="form-row">
+                <label>Industrial Doors</label>
+                <input type="number" name="industrial_door" min="0"
+                value="{{ form_data.factory.fixtures.industrial_door if form_data else 0 }}">
+            </div>
+
+            <div class="form-row">
+                <label>Pedestrian Doors</label>
+                <input type="number" name="pedestrian_door" min="0"
+                value="{{ form_data.factory.fixtures.pedestrian_door if form_data else 0 }}">
+            </div>
+
+            <div class="form-row">
+                <label>Windows</label>
+                <input type="number" name="window" min="0"
+                value="{{ form_data.factory.fixtures.window if form_data else 0 }}">
+            </div>
+        </div>
+
+
+        <!-- Structure -->
+        <div class="card large-card">
+            <h2>Structure</h2>
+
+            <div class="form-row">
+                <label>Floor Slabs</label>
+                <input type="number" name="floor_slabs" min="0"
+                value="{{ form_data.factory.floor_slabs if form_data else 0 }}">
+            </div>
+
+            <div class="form-row">
+                <label>Roof Panels</label>
+                <input type="number" name="roof_panels" min="0"
+                value="{{ form_data.factory.roof_panels if form_data else 0 }}">
+            </div>
+        </div>
+
+
+        <!-- Production Processes -->
+        <div class="card large-card">
+            <h2>Production Processes</h2>
+
+            <div class="form-row">
+                <label>Job Production</label>
+                <input type="number" name="job" min="0"
+                value="{{ form_data.factory.production_lines.count('job') if form_data else 0 }}">
+            </div>
+
+            <div class="form-row">
+                <label>Batch Production</label>
+                <input type="number" name="batch" min="0"
+                value="{{ form_data.factory.production_lines.count('batch') if form_data else 0 }}">
+            </div>
+
+            <div class="form-row">
+                <label>Cellular Production</label>
+                <input type="number" name="cell" min="0"
+                value="{{ form_data.factory.production_lines.count('cell') if form_data else 0 }}">
+            </div>
+
+            <div class="form-row">
+                <label>Flow Production</label>
+                <input type="number" name="flow" min="0"
+                value="{{ form_data.factory.production_lines.count('flow') if form_data else 0 }}">
+            </div>
+        </div>
+
+
+        <!-- Quality System -->
+        <div class="card large-card">
+            <h2>Quality System</h2>
+
+            <div class="form-row">
+                <label>Quality Approach</label>
+                <select name="quality_system" required>
+
+                    <option value="" disabled
+                        {% if not form_data or not form_data.factory.quality_system %}selected{% endif %}>
+                        Select a quality system
+                    </option>
+
+                    <option value="qc"
+                        {% if form_data and form_data.factory.quality_system == "qc" %}selected{% endif %}>
+                        Quality Control (QC)
+                    </option>
+
+                    <option value="qa"
+                        {% if form_data and form_data.factory.quality_system == "qa" %}selected{% endif %}>
+                        Quality Assurance (QA)
+                    </option>
+
+                    <option value="tqm"
+                        {% if form_data and form_data.factory.quality_system == "tqm" %}selected{% endif %}>
+                        Total Quality Management (TQM)
+                    </option>
+
+                </select>
+            </div>
+        </div>
+
+
+        <button type="submit" class="btn teacher">
+            💾 Save Factory
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}
