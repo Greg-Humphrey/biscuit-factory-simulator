@@ -78,6 +78,19 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 # ============================================================
+# HOMEPAGE
+# ============================================================
+
+from fastapi.responses import HTMLResponse
+
+@app.get("/", response_class=HTMLResponse)
+def homepage(request: Request):
+    return templates.TemplateResponse(
+        "marketing/homepage.html",
+        {"request": request}
+    )
+
+# ============================================================
 # AUTH HELPERS
 # ============================================================
 
