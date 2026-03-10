@@ -85,6 +85,17 @@ from fastapi.responses import HTMLResponse
 
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
+
+    host = request.headers.get("host", "")
+
+    # If the user is on the simulator subdomain
+    if host.startswith("sim."):
+        return templates.TemplateResponse(
+            "home.html",
+            {"request": request}
+        )
+
+    # Otherwise show the marketing homepage
     return templates.TemplateResponse(
         "marketing/homepage.html",
         {"request": request}
