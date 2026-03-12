@@ -6,7 +6,6 @@ from database import get_connection
 from weasyprint import HTML
 from jinja2 import Environment, FileSystemLoader
 from database import get_active_session
-from api import build_team_financials
 from scenario_engine import DEFAULT_SCENARIO
 
 env = Environment(loader=FileSystemLoader("templates"))
