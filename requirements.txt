@@ -4,3 +4,4 @@ jinja2
 python-jose
 reportlab
 python-multipart
+weasyprint
