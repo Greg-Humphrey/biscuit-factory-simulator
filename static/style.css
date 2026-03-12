@@ -275,6 +275,7 @@ background-color:#f2f2f2;
     gap: 10px;
     align-items: center;
     margin-bottom: 4px;
+    flex-wrap: wrap;
 }
 
 .run-row input {
@@ -342,3 +343,25 @@ background-color:#f2f2f2;
     border-radius: 6px;
     cursor: pointer;
 }
+
+/* ==============================
+   PDF IMPROVEMENTS
+================================ */
+
+@page {
+    size: A4;
+    margin: 2cm;
+}
+
+table {
+    page-break-inside: avoid;
+}
+
+h1, h2, h3 {
+    page-break-after: avoid;
+}
+
+details {
+    page-break-inside: avoid;
+}
+

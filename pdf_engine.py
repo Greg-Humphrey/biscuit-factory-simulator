@@ -1,12 +1,40 @@
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch
 import os
 import json
 import zipfile
 from datetime import datetime
 from database import get_connection
+from weasyprint import HTML
+from jinja2 import Environment, FileSystemLoader
+from database import get_active_session
+from api import build_team_financials
+from scenario_engine import DEFAULT_SCENARIO
+
+env = Environment(loader=FileSystemLoader("templates"))
+
+def generate_teacher_pdf(session_data, folder):
+
+    template = env.get_template("teacher_dashboard_pdf.html")
+
+    html = template.render(**session_data)
+
+    pdf_path = os.path.join(folder, "teacher_dashboard.pdf")
+
+    HTML(string=html).write_pdf(pdf_path)
+
+    return pdf_path
+
+def generate_team_pdf(team_data, folder):
+
+    template = env.get_template("team_dashboard_pdf.html")
+
+    html = template.render(**team_data)
+
+    filename = f"{team_data['team_name']}_dashboard.pdf"
+    pdf_path = os.path.join(folder, filename)
+
+    HTML(string=html).write_pdf(pdf_path)
+
+    return pdf_path
 
 def create_reports_folder():
     folder = "temp_reports"
@@ -44,214 +72,135 @@ def get_teams_for_session(session_id):
 
     return teams
 
-def generate_teacher_report(session_id, folder):
+def build_teacher_dashboard_data(session_id):
 
-    teams = get_teams_for_session(session_id)
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    pdf_path = os.path.join(folder, "teacher_report.pdf")
+    active_session = get_active_session()
 
-    styles = getSampleStyleSheet()
-    elements = []
+    current_month = active_session[3]
+    total_months = active_session[4]
 
-    # -------------------------
-    # Title
-    # -------------------------
+    # ----------------------------
+    # Load scenarios
+    # ----------------------------
 
-    elements.append(Paragraph("Biscuit Factory Simulator", styles['Title']))
-    elements.append(Paragraph("Teacher Report", styles['Heading2']))
-    elements.append(Spacer(1,20))
+    cursor.execute("""
+        SELECT scenario_state
+        FROM simulation_sessions
+        WHERE session_id = ?
+    """, (session_id,))
 
-    # -------------------------
-    # Leaderboard
-    # -------------------------
+    result = cursor.fetchone()
 
-    elements.append(Paragraph("Class Leaderboard", styles['Heading2']))
+    scenario_state = json.loads(result[0]) if result and result[0] else {}
 
-    leaderboard = [["Team","Profit","Cash","Remaining Investment"]]
+    scenarios = {}
 
-    for team in teams:
+    for month in range(1, total_months + 1):
 
-        sim = team["simulation"]
+        scenario = DEFAULT_SCENARIO.copy()
 
-        leaderboard.append([
-            team["team_name"],
-            f"£{sim.get('cumulative_profit',0):,.0f}",
-            f"£{sim.get('cash',0):,.0f}",
-            f"£{sim.get('investment_outstanding',0):,.0f}"
-        ])
+        override = scenario_state.get(str(month))
 
-    elements.append(Table(leaderboard))
-    elements.append(Spacer(1,20))
+        if override:
+            scenario.update(override)
 
-    # -------------------------
-    # Production Summary
-    # -------------------------
+        scenarios[str(month)] = scenario
 
-    elements.append(Paragraph("Production Summary", styles['Heading2']))
+    # ----------------------------
+    # Teams
+    # ----------------------------
 
-    production_data = [["Team","Produced","Sold","Wastage %"]]
+    cursor.execute("""
+        SELECT team_id, team_name, password, meta
+        FROM teams
+        WHERE role='team' AND session_id=?
+    """, (session_id,))
 
-    for team in teams:
+    raw_teams = cursor.fetchall()
 
-        sim = team["simulation"]
-        history = sim.get("history", [])
+    teams = []
 
-        total_produced = 0
-        total_sold = 0
+    for team_id, team_name, password, meta_blob in raw_teams:
 
-        for month in history:
-            total_produced += month["units_produced"]
-            total_sold += month["units_sold"]
+        meta = json.loads(meta_blob) if meta_blob else {}
 
-        wastage = 0
-        if total_produced > 0:
-            wastage = ((total_produced - total_sold) / total_produced) * 100
+        auto_built = meta.get("auto_built", False)
 
-        production_data.append([
-            team["team_name"],
-            int(total_produced),
-            int(total_sold),
-            f"{wastage:.1f}%"
-        ])
+        teams.append((team_id, team_name, password, auto_built))
 
-    elements.append(Table(production_data))
-    elements.append(Spacer(1,20))
+    team_count = len(teams)
 
-    # -------------------------
-    # Monthly Scenarios
-    # -------------------------
+    # ----------------------------
+    # Financials
+    # ----------------------------
 
-    elements.append(Paragraph("Monthly Scenarios", styles['Heading2']))
+    team_financials = build_team_financials(session_id)
 
-    scenario_table = [["Month","Scenario"]]
+    # ----------------------------
+    # Monthly results
+    # ----------------------------
 
-    # Use first team to read scenarios
-    if teams:
+    monthly_results = {}
 
-        history = teams[0]["simulation"].get("history", [])
+    for month in range(1, total_months + 1):
+        monthly_results[month] = []
 
-        for month in history:
+    for team_id, team_name, password, meta_blob in raw_teams:
 
-            scenario_table.append([
-                month["month"],
-                month["scenario"]
-            ])
+        meta = json.loads(meta_blob) if meta_blob else {}
 
-    elements.append(Table(scenario_table))
+        cursor.execute(
+            "SELECT simulation FROM teams WHERE team_id = ?",
+            (team_id,)
+        )
 
-    doc = SimpleDocTemplate(pdf_path, pagesize=A4)
-    doc.build(elements)
+        result = cursor.fetchone()
 
-    return pdf_path
+        if result and result[0]:
 
-def generate_team_report(team, folder):
+            simulation = json.loads(result[0])
 
-    sim = team["simulation"]
-    history = sim.get("history", [])
-    factory = sim.get("factory", {})
+            history = simulation.get("history", [])
 
-    filename = f"team_{team['team_name']}.pdf"
-    pdf_path = os.path.join(folder, filename)
+            for report in history:
 
-    styles = getSampleStyleSheet()
-    elements = []
+                month = report["month"]
 
-    # -------------------------
-    # Title
-    # -------------------------
+                monthly_results[month].append({
+                    "team": team_name,
+                    "units_produced": report["units_produced"],
+                    "units_sold": report["units_sold"],
+                    "revenue": report["revenue"],
+                    "total_cost": report["total_cost"],
+                    "profit": report["profit"]
+                })
 
-    elements.append(Paragraph(f"Team Report — {team['team_name']}", styles['Title']))
-    elements.append(Spacer(1,20))
+    conn.close()
 
-    # -------------------------
-    # Factory Setup
-    # -------------------------
+    return {
+        "active_session": active_session,
+        "teams": teams,
+        "team_count": team_count,
+        "team_financials": team_financials,
+        "scenarios": scenarios,
+        "current_month": current_month,
+        "total_months": total_months,
+        "monthly_results": monthly_results
+    }
 
-    elements.append(Paragraph("Factory Setup", styles['Heading2']))
+def build_team_dashboard_data(team):
 
-    lines = factory.get("lines", [])
-    line_types = [line["process_type"] for line in lines]
+    active_session = get_active_session()
 
-    factory_data = [
-        ["Factory Size", f"{factory.get('length_m',0)}m x {factory.get('width_m',0)}m"],
-        ["Quality System", factory.get("quality_system","None")],
-        ["Production Lines", ", ".join(line_types) if line_types else "None"],
-        ["Floor Slabs", factory.get("floor_slabs_purchased",0)],
-        ["Roof Panels", factory.get("roof_panels_purchased",0)]
-    ]
-
-    elements.append(Table(factory_data))
-    elements.append(Spacer(1,20))
-
-    # -------------------------
-    # Financial Summary
-    # -------------------------
-
-    elements.append(Paragraph("Financial Summary", styles['Heading2']))
-
-    summary_data = [
-        ["Starting Investment", f"£{sim.get('starting_cash',0):,.0f}"],
-        ["Total Profit", f"£{sim.get('cumulative_profit',0):,.0f}"],
-        ["Cash", f"£{sim.get('cash',0):,.0f}"],
-        ["Remaining Investment", f"£{sim.get('investment_outstanding',0):,.0f}"]
-    ]
-
-    elements.append(Table(summary_data))
-    elements.append(Spacer(1,20))
-
-    # -------------------------
-    # Monthly Performance
-    # -------------------------
-
-    elements.append(Paragraph("Monthly Performance", styles['Heading2']))
-
-    table_data = [["Month","Scenario","Produced","Sold","Revenue","Profit"]]
-
-    total_produced = 0
-    total_sold = 0
-
-    for month in history:
-
-        produced = month["units_produced"]
-        sold = month["units_sold"]
-
-        total_produced += produced
-        total_sold += sold
-
-        table_data.append([
-            month["month"],
-            month["scenario"],
-            int(produced),
-            int(sold),
-            f"£{month['revenue']:,.0f}",
-            f"£{month['profit']:,.0f}"
-        ])
-
-    elements.append(Table(table_data))
-    elements.append(Spacer(1,20))
-
-    # -------------------------
-    # Production Totals
-    # -------------------------
-
-    wastage = 0
-    if total_produced > 0:
-        wastage = ((total_produced - total_sold) / total_produced) * 100
-
-    elements.append(Paragraph("Production Totals", styles['Heading2']))
-
-    totals = [
-        ["Total Produced", int(total_produced)],
-        ["Total Sold", int(total_sold)],
-        ["Wastage %", f"{wastage:.1f}%"]
-    ]
-
-    elements.append(Table(totals))
-
-    doc = SimpleDocTemplate(pdf_path, pagesize=A4)
-    doc.build(elements)
-
-    return pdf_path
+    return {
+        "team_name": team["team_name"],
+        "simulation": team["simulation"],
+        "active_session": active_session,
+        "team_financials": build_team_financials(active_session[0])
+    }
 
 def generate_all_reports(session_id):
 
@@ -261,12 +210,20 @@ def generate_all_reports(session_id):
 
     files = []
 
-    teacher_pdf = generate_teacher_report(session_id, folder)
+    # Teacher PDF
+    teacher_data = build_teacher_dashboard_data(session_id)
+
+    teacher_pdf = generate_teacher_pdf(teacher_data, folder)
+
     files.append(teacher_pdf)
 
+    # Team PDFs
     for team in teams:
 
-        team_pdf = generate_team_report(team, folder)
+        team_data = build_team_dashboard_data(team)
+
+        team_pdf = generate_team_pdf(team_data, folder)
+
         files.append(team_pdf)
 
     return files

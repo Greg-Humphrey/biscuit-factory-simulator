@@ -1786,6 +1786,8 @@ def create_pdfs():
 
     session_id = session[0]
 
+    from pdf_engine import generate_all_reports, create_zip
+
     files = generate_all_reports(session_id)
 
     zip_path = create_zip(files)

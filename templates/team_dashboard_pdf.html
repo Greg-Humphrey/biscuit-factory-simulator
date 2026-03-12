@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+
+<title>Team Dashboard Report</title>
+
+<link rel="stylesheet" href="/static/style.css">
+
+<style>
+body {
+    font-size: 12px;
+}
+
+h1, h2 {
+    margin-top: 25px;
+}
+
+table {
+    page-break-inside: avoid;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>🏭 Biscuit Factory Simulator</h1>
+<h2>Team Dashboard Report</h2>
+
+<p><strong>Team:</strong> {{ team_name }}</p>
+
+<hr>
+
+<!-- ================================ -->
+<!-- SIMULATION SESSION SUMMARY -->
+<!-- ================================ -->
+
+<h2>Simulation Session</h2>
+
+<p><strong>Status:</strong> {{ active_session[2] }}</p>
+<p><strong>Current Month:</strong> {{ active_session[3] }}</p>
+<p><strong>Total Months:</strong> {{ active_session[4] }}</p>
+
+<hr>
+
+{% if simulation and simulation.get("factory") %}
+
+{% set factory = simulation.get("factory", {}) %}
+{% set costs = simulation.get("factory_cost_breakdown", {}) %}
+
+<!-- ================================ -->
+<!-- INVESTMENT BREAKDOWN -->
+<!-- ================================ -->
+
+<h2>Investment Breakdown</h2>
+
+<table>
+
+<tr>
+<td>Capital Raised</td>
+<td>£{{ simulation.get("starting_cash",0) | round(0) }}</td>
+</tr>
+
+<tr>
+<td>Capital Spent</td>
+<td>£{{ simulation.get("total_initial_investment",0) | round(0) }}</td>
+</tr>
+
+<tr>
+<td>Capital Unused</td>
+<td>£{{ simulation.get("unused_capital",0) | round(0) }}</td>
+</tr>
+
+<tr>
+<td>Capital Still to Repay</td>
+<td>£{{ simulation.get("investment_outstanding",0) | round(0) }}</td>
+</tr>
+
+</table>
+
+<hr>
+
+<!-- ================================ -->
+<!-- FACTORY BREAKDOWN -->
+<!-- ================================ -->
+
+<h2>Factory Breakdown</h2>
+
+<table>
+
+<tr>
+<td>Factory Dimensions</td>
+<td>{{ factory.get("length_m",0) }}m × {{ factory.get("width_m",0) }}m</td>
+</tr>
+
+<tr>
+<td>Production Lines</td>
+<td>
+
+{% set counts = {} %}
+{% for line in factory.get("lines", []) %}
+{% set t = line.get("process_type") %}
+{% set _ = counts.update({t: counts.get(t, 0) + 1}) %}
+{% endfor %}
+
+{% for process, count in counts.items() %}
+<div>{{ count }} × {{ process }}</div>
+{% endfor %}
+
+</td>
+</tr>
+
+<tr>
+<td>Quality System</td>
+<td>{{ simulation.get("current_quality_system") | upper }}</td>
+</tr>
+
+</table>
+
+<hr>
+
+<!-- ================================ -->
+<!-- FACTORY PERFORMANCE -->
+<!-- ================================ -->
+
+<h2>Factory Performance</h2>
+
+{% include "components/team_performance_table.html" %}
+
+<hr>
+
+<!-- ================================ -->
+<!-- MONTHLY HISTORY -->
+<!-- ================================ -->
+
+<h2>Monthly Results</h2>
+
+{% for month in simulation.get("history", []) %}
+
+<h3>Month {{ month.month }} — {{ month.scenario }}</h3>
+
+<ul>
+
+<li><strong>Units Produced:</strong> {{ month.units_produced }}</li>
+<li><strong>Units Sold:</strong> {{ month.units_sold }}</li>
+
+<li><strong>Revenue:</strong> £{{ month.revenue | round(0) }}</li>
+
+<li><strong>Total Cost:</strong> £{{ month.total_cost | round(0) }}</li>
+
+{% if month.cost_breakdown %}
+
+<ul>
+
+<li>Ingredients: £{{ month.cost_breakdown.ingredients | round(0) }}</li>
+<li>Labour: £{{ month.cost_breakdown.labour | round(0) }}</li>
+<li>Utilities: £{{ month.cost_breakdown.monthly_utilities | round(0) }}</li>
+<li>Changeover: £{{ month.cost_breakdown.changeover | round(0) }}</li>
+<li>Shipping: £{{ month.cost_breakdown.shipping | round(0) }}</li>
+
+</ul>
+
+{% endif %}
+
+<li><strong>Profit:</strong> £{{ month.profit | round(0) }}</li>
+
+<li><strong>Cash:</strong> £{{ month.cash | round(0) }}</li>
+
+<li><strong>Remaining Investment:</strong>
+£{{ month.remaining_investment_to_recover | round(0) }}
+</li>
+
+</ul>
+
+{% endfor %}
+
+{% endif %}
+
+</body>
+</html>

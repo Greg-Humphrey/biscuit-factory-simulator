@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+
+<title>Teacher Dashboard Report</title>
+
+<link rel="stylesheet" href="/static/style.css">
+
+<style>
+body {
+    font-size: 12px;
+}
+
+h1, h2 {
+    margin-top: 25px;
+}
+
+table {
+    page-break-inside: avoid;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>🏭 Biscuit Factory Simulator</h1>
+<h2>Teacher Dashboard Report</h2>
+
+<hr>
+
+<!-- ================================ -->
+<!-- SIMULATION SESSION SUMMARY -->
+<!-- ================================ -->
+
+<h2>Simulation Session</h2>
+
+<p><strong>Name:</strong> {{ active_session[1] }}</p>
+<p><strong>Status:</strong> {{ active_session[2] }}</p>
+<p><strong>Current Month:</strong> {{ current_month }}</p>
+<p><strong>Total Months:</strong> {{ total_months }}</p>
+<p><strong>Registered Teams:</strong> {{ team_count }}</p>
+
+<hr>
+
+<!-- ================================ -->
+<!-- REGISTERED TEAMS -->
+<!-- ================================ -->
+
+<h2>Registered Teams</h2>
+
+{% if teams %}
+<table>
+
+<thead>
+<tr>
+<th>Team Name</th>
+<th>Password</th>
+<th>Factory Result</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for team_id, team_name, password, auto_built in teams %}
+
+<tr>
+
+<td>{{ team_name }}</td>
+
+<td>{{ password }}</td>
+
+<td>
+{% if auto_built %}
+⚙ Auto-built
+{% else %}
+🏗 Built by Team
+{% endif %}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+{% else %}
+
+<p>No teams registered.</p>
+
+{% endif %}
+
+<hr>
+
+<!-- ================================ -->
+<!-- MONTHLY SCENARIOS -->
+<!-- ================================ -->
+
+<h2>Monthly Scenarios</h2>
+
+{% for month in range(1, total_months + 1) %}
+
+{% set scenario = scenarios[month|string] %}
+
+<h3>Month {{ month }} — {{ scenario.name }}</h3>
+
+<table>
+
+<tr><td>Ingredient Multiplier</td><td>{{ scenario.ingredient_multiplier }}</td></tr>
+<tr><td>Shipping Multiplier</td><td>{{ scenario.shipping_multiplier }}</td></tr>
+<tr><td>Sales Price Multiplier</td><td>{{ scenario.sales_price_multiplier }}</td></tr>
+<tr><td>Demand Multiplier</td><td>{{ scenario.demand_multiplier }}</td></tr>
+<tr><td>Extra Fixed Cost</td><td>{{ scenario.extra_fixed_cost }}</td></tr>
+
+</table>
+
+{% endfor %}
+
+<hr>
+
+<!-- ================================ -->
+<!-- INVESTMENT BREAKDOWN -->
+<!-- ================================ -->
+
+<h2>Investment Breakdown (All Teams)</h2>
+
+{% if team_financials %}
+
+<table>
+
+<thead>
+<tr>
+<th>Team</th>
+<th>Initial Investment</th>
+<th>Unused Capital</th>
+<th>Remaining Investment</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for team in team_financials %}
+
+<tr>
+<td>{{ team.name }}</td>
+<td>£{{ team.initial_investment | round(0) }}</td>
+<td>£{{ team.unused_capital | round(0) }}</td>
+<td>£{{ team.remaining_investment | round(0) }}</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endif %}
+
+<hr>
+
+<!-- ================================ -->
+<!-- FACTORY PERFORMANCE -->
+<!-- ================================ -->
+
+<h2>Factory Performance</h2>
+
+{% include "components/class_performance_table.html" %}
+
+<hr>
+
+<!-- ================================ -->
+<!-- MONTHLY RESULTS -->
+<!-- ================================ -->
+
+<h2>Monthly Results</h2>
+
+{% for month in range(1, total_months + 1) %}
+
+{% set scenario = scenarios[month|string] %}
+
+<h3>Month {{ month }} — {{ scenario.name }}</h3>
+
+{% if monthly_results.get(month) %}
+
+<table>
+
+<thead>
+
+<tr>
+<th>Team</th>
+<th>Produced</th>
+<th>Sold</th>
+<th>Revenue</th>
+<th>Total Cost</th>
+<th>Profit</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for row in monthly_results.get(month, []) %}
+
+<tr>
+
+<td>{{ row.team }}</td>
+<td>{{ row.units_produced }}</td>
+<td>{{ row.units_sold }}</td>
+<td>£{{ row.revenue | round(0) }}</td>
+<td>£{{ row.total_cost | round(0) }}</td>
+
+<td>
+{% if row.profit >= 0 %}
+£{{ row.profit | round(0) }}
+{% else %}
+£{{ row.profit | round(0) }}
+{% endif %}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>No results yet.</p>
+
+{% endif %}
+
+{% endfor %}
+
+</body>
+</html>
