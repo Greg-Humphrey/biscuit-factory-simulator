@@ -91,9 +91,16 @@ table {
 
 <table>
 
+<thead>
+<tr><th></th><th>Decision</th><th style="text-align:right;">Cost</th></tr>
+</thead>
+
+<tbody>
+
 <tr>
-<td>Factory Dimensions</td>
-<td>{{ factory.get("length_m",0) }}m × {{ factory.get("width_m",0) }}m</td>
+<td>Factory Build</td>
+<td></td>
+<td style="text-align:right;">£{{ simulation.get("build_cost", 0) | round(0) }}</td>
 </tr>
 
 <tr>
@@ -103,12 +110,69 @@ table {
 <div>Line {{ loop.index }}: {{ line.get("process_type") | capitalize }}</div>
 {% endfor %}
 </td>
+<td style="text-align:right;">£{{ simulation.get("machinery_cost", 0) | round(0) }}</td>
 </tr>
 
 <tr>
-<td>Quality System</td>
-<td>{{ simulation.get("current_quality_system") | upper }}</td>
+<td>Utilities Setup</td>
+<td></td>
+<td style="text-align:right;">£{{ costs.get("utilities_cost", 0) | round(0) }}</td>
 </tr>
+
+<tr>
+<td>Quality System Setup</td>
+<td>{{ simulation.get("initial_quality_system") | upper }}</td>
+<td style="text-align:right;">£{{ simulation.get("quality_setup_cost", 0) | round(0) }}</td>
+</tr>
+
+<tr>
+<td>Factory Dimensions</td>
+<td>
+<div>{{ factory.get("length_m",0) }}m × {{ factory.get("width_m",0) }}m</div>
+<div>({{ factory.get("total_space_m2",0) }} m²)</div>
+</td>
+<td></td>
+</tr>
+
+<tr>
+<td>Wall Blocks</td>
+<td>
+<div>Small: {{ factory.get("wall_blocks_used", {}).get("small", 0) }}</div>
+<div>Medium: {{ factory.get("wall_blocks_used", {}).get("medium", 0) }}</div>
+<div>Large: {{ factory.get("wall_blocks_used", {}).get("large", 0) }}</div>
+</td>
+<td style="text-align:right;">£{{ costs.get("wall_cost", 0) | round(0) }}</td>
+</tr>
+
+<tr>
+<td>Fixtures</td>
+<td>
+<div>Industrial Doors: {{ factory.get("fixtures", {}).get("industrial_door", 0) }}</div>
+<div>Pedestrian Doors: {{ factory.get("fixtures", {}).get("pedestrian_door", 0) }}</div>
+<div>Windows: {{ factory.get("fixtures", {}).get("window", 0) }}</div>
+</td>
+<td style="text-align:right;">£{{ costs.get("fixtures_cost", 0) | round(0) }}</td>
+</tr>
+
+<tr>
+<td>Floor Slabs</td>
+<td>{{ factory.get("floor_slabs_purchased", 0) }} slabs</td>
+<td style="text-align:right;">£{{ costs.get("floor_cost", 0) | round(0) }}</td>
+</tr>
+
+<tr>
+<td>Roof Panels</td>
+<td>{{ factory.get("roof_panels_purchased", 0) }} panels</td>
+<td style="text-align:right;">£{{ costs.get("roof_cost", 0) | round(0) }}</td>
+</tr>
+
+<tr>
+<td>Current Quality System</td>
+<td>{{ (simulation.get("current_quality_system") or factory.get("quality_system") or "None") | upper }}</td>
+<td></td>
+</tr>
+
+</tbody>
 
 </table>
 

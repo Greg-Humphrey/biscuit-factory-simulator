@@ -108,21 +108,19 @@ table {
 
 <table>
 
+<tr><td><strong>Scrap Rates</strong></td><td></td></tr>
+<tr><td>QC</td><td>{{ scenario.scrap_rate.qc }}</td></tr>
+<tr><td>QA</td><td>{{ scenario.scrap_rate.qa }}</td></tr>
+<tr><td>TQM</td><td>{{ scenario.scrap_rate.tqm }}</td></tr>
+
 <tr><td><strong>Multipliers</strong></td><td></td></tr>
 <tr><td>Ingredient Multiplier</td><td>{{ scenario.ingredient_multiplier }}</td></tr>
 <tr><td>Shipping Multiplier</td><td>{{ scenario.shipping_multiplier }}</td></tr>
 <tr><td>Sales Price Multiplier</td><td>{{ scenario.sales_price_multiplier }}</td></tr>
 <tr><td>Demand Multiplier</td><td>{{ scenario.demand_multiplier }}</td></tr>
 <tr><td>Extra Fixed Cost</td><td>£{{ scenario.extra_fixed_cost }}</td></tr>
-
-<tr><td><strong>Scrap Rates</strong></td><td></td></tr>
-<tr><td>QC Scrap Rate</td><td>{{ (scenario.scrap_rate.qc * 100) | round(1) }}%</td></tr>
-<tr><td>QA Scrap Rate</td><td>{{ (scenario.scrap_rate.qa * 100) | round(1) }}%</td></tr>
-<tr><td>TQM Scrap Rate</td><td>{{ (scenario.scrap_rate.tqm * 100) | round(1) }}%</td></tr>
-
-<tr><td><strong>Events</strong></td><td></td></tr>
-<tr><td>Machine Breakdown Cost (per 10,000 units)</td><td>£{{ scenario.machine_breakdown }}</td></tr>
-<tr><td>Employee Strike Cost (per 10% labour intensity)</td><td>£{{ scenario.employee_strike }}</td></tr>
+<tr><td>Machine Breakdown Cost per 10,000 Units</td><td>£{{ scenario.machine_breakdown }}</td></tr>
+<tr><td>Employee Strike Cost per 10% Labour Intensity</td><td>£{{ scenario.employee_strike }}</td></tr>
 
 </table>
 
