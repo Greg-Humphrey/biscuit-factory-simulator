@@ -169,6 +169,7 @@ def build_teacher_dashboard_data(session_id):
 
                 monthly_results[month].append({
                     "team": team_name,
+                    "quality_system": report.get("quality_system", ""),
                     "units_produced": report["units_produced"],
                     "units_sold": report["units_sold"],
                     "revenue": report["revenue"],
@@ -193,12 +194,20 @@ def build_team_dashboard_data(team):
 
     active_session = get_active_session()
 
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT competitive_mode FROM simulation_sessions WHERE session_id = ?", (active_session[0],))
+    row = cursor.fetchone()
+    conn.close()
+    competitive_mode = bool(row[0]) if row else False
+
     return {
         "team_name": team["team_name"],
         "simulation": team["simulation"],
         "active_session": active_session,
         "team_financials": build_team_financials(active_session[0]),
-        "current_team_id": team["team_id"]
+        "current_team_id": team["team_id"],
+        "competitive_mode": competitive_mode
     }
 
 def generate_all_reports(session_id):

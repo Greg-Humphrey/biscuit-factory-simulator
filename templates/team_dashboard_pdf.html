@@ -248,12 +248,13 @@ table {
 
 {% for month in simulation.get("history", []) %}
 
-<h3>Month {{ month.month }} — {{ month.scenario }} {% if month.quality_system %}({{ month.quality_system | upper }}){% endif %}</h3>
+<h3>Month {{ month.month }} — {{ month.scenario }}</h3>
 
 <ul>
 
 <li><strong>Units Produced:</strong> {{ month.units_produced }}</li>
 <li><strong>Units Sold:</strong> {{ month.units_sold }}</li>
+{% if month.quality_system %}<li><strong>Quality System:</strong> {{ month.quality_system | upper }}</li>{% endif %}
 
 <li><strong>Revenue:</strong> £{{ month.revenue | round(0) }}</li>
 
@@ -289,6 +290,70 @@ table {
 </ul>
 
 {% endfor %}
+
+{% if competitive_mode %}
+
+<hr>
+
+<h2>🏆 Class Performance</h2>
+
+<h3>💰 Financial Performance</h3>
+
+<table>
+<thead>
+<tr>
+<th>Team</th>
+<th>Profit</th>
+<th>Gross Profit Margin</th>
+<th>Cash</th>
+<th>Remaining Investment</th>
+<th>Overheads</th>
+</tr>
+</thead>
+<tbody>
+{% for team in team_financials %}
+<tr {% if team["id"]|string == current_team_id|string %}style="font-weight:bold;"{% endif %}>
+<td>{{ team.name }}</td>
+<td>£{{ team.cumulative_profit | round(0) }}</td>
+<td>{{ (team.margin * 100) | round(1) }}%</td>
+<td>£{{ team.cash | round(0) }}</td>
+<td>£{{ team.remaining_investment | round(0) }}</td>
+<td>£{{ team.overheads | round(0) }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h3>🏭 Production Performance</h3>
+
+<table>
+<thead>
+<tr>
+<th>Team</th>
+<th>Total Units Produced</th>
+<th>Total Units Sold</th>
+<th>Units Not Sold</th>
+<th>% Wastage</th>
+</tr>
+</thead>
+<tbody>
+{% for team in team_financials %}
+<tr {% if team["id"]|string == current_team_id|string %}style="font-weight:bold;"{% endif %}>
+<td>{{ team.name }}</td>
+<td>{{ team.total_units_produced | round(0) }}</td>
+<td>{{ team.total_units_sold | round(0) }}</td>
+<td>{{ (team.total_units_produced - team.total_units_sold) | round(0) }}</td>
+<td>
+{% if team.total_units_produced > 0 %}
+{{ (((team.total_units_produced - team.total_units_sold) / team.total_units_produced) * 100) | round(1) }}%
+{% else %}
+0%
+{% endif %}
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
 
 {% endif %}
 

@@ -218,11 +218,12 @@
         <!-- ================================= -->
         {% for month in simulation.get("history", []) %}
             <details>
-                <summary><strong>📅 Month {{ month.month }} Performance - {{ month.scenario }} {% if month.quality_system %}({{ month.quality_system | upper }}){% endif %}</strong></summary>
+                <summary><strong>📅 Month {{ month.month }} Performance - {{ month.scenario }}</strong></summary>
 
                 <ul>
                     <li><strong>Units Produced:</strong> {{ month.units_produced }}</li>
                     <li><strong>Units Sold:</strong> {{ month.units_sold }}</li>
+                    {% if month.quality_system %}<li><strong>Quality System:</strong> {{ month.quality_system | upper }}</li>{% endif %}
                     <li><strong>Revenue:</strong> £{{ month.revenue | round(0) }}</li>
                     <li>
                     <strong>Total Cost:</strong> £{{ month.total_cost | round(0) }}
