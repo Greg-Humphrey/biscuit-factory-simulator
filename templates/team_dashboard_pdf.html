@@ -9,16 +9,63 @@
 <link rel="stylesheet" href="static/style.css">
 
 <style>
-body {
-    font-size: 12px;
+@page {
+    margin: 10mm;
 }
 
-h1, h2 {
-    margin-top: 25px;
+body {
+    font-size: 10px;
 }
+
+h1 { font-size: 16px; margin: 0 0 4px 0; }
+h2 { font-size: 13px; margin: 10px 0 4px 0; }
+h3 { font-size: 11px; margin: 6px 0 2px 0; }
+
+p { margin: 2px 0; }
+hr { margin: 6px 0; }
 
 table {
+    border-collapse: collapse;
+    width: 100%;
     page-break-inside: avoid;
+}
+
+th, td {
+    padding: 2px 5px;
+    border: 1px solid #ccc;
+}
+
+th {
+    background: #f0f0f0;
+}
+
+/* Compact month table — matches density of original bullet list */
+.month-table td {
+    padding: 1px 5px;
+    border: none;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.month-table td:first-child {
+    font-weight: bold;
+    width: 55%;
+}
+
+.month-table .cost-header td {
+    font-weight: bold;
+    color: #333;
+    padding-top: 3px;
+}
+
+.month-table .cost-row td {
+    font-size: 9px;
+    color: #555;
+    font-weight: normal;
+}
+
+.month-table .cost-row td:first-child {
+    padding-left: 12px;
+    font-weight: normal;
 }
 </style>
 
@@ -250,44 +297,28 @@ table {
 
 <h3>Month {{ month.month }} — {{ month.scenario }}</h3>
 
-<ul>
-
-<li><strong>Units Produced:</strong> {{ month.units_produced }}</li>
-<li><strong>Units Sold:</strong> {{ month.units_sold }}</li>
-{% if month.quality_system %}<li><strong>Quality System:</strong> {{ month.quality_system | upper }}</li>{% endif %}
-
-<li><strong>Revenue:</strong> £{{ month.revenue | round(0) }}</li>
-
-<li><strong>Total Cost:</strong> £{{ month.total_cost | round(0) }}</li>
-
+<table class="month-table">
+<tr><td>Units Produced</td><td>{{ month.units_produced }}</td></tr>
+<tr><td>Units Sold</td><td>{{ month.units_sold }}</td></tr>
+{% if month.quality_system %}<tr><td>Quality System</td><td>{{ month.quality_system | upper }}</td></tr>{% endif %}
+<tr><td>Revenue</td><td>£{{ month.revenue | round(0) }}</td></tr>
+<tr class="cost-header"><td>Total Cost</td><td>£{{ month.total_cost | round(0) }}</td></tr>
 {% if month.cost_breakdown %}
-
-<ul>
-
-<li>Ingredients: £{{ month.cost_breakdown.ingredients | round(0) }}</li>
-<li>Labour: £{{ month.cost_breakdown.labour | round(0) }}</li>
-<li>Utilities: £{{ month.cost_breakdown.monthly_utilities | round(0) }}</li>
-<li>Changeover: £{{ month.cost_breakdown.changeover | round(0) }}</li>
-<li>Shipping: £{{ month.cost_breakdown.shipping | round(0) }}</li>
-<li>Quality System: £{{ month.cost_breakdown.quality_system | round(0) }}</li>
-<li>Machine Breakdown: £{{ month.cost_breakdown.machine_breakdown | round(0) }}</li>
-<li>Employee Strike: £{{ month.cost_breakdown.employee_strike | round(0) }}</li>
-<li>Extra Fixed Cost: £{{ month.cost_breakdown.extra_fixed_cost | round(0) }}</li>
-<li>Quality System Change: £{{ month.cost_breakdown.quality_system_change_cost | round(0) }}</li>
-
-</ul>
-
+<tr class="cost-row"><td>Ingredients</td><td>£{{ month.cost_breakdown.ingredients | round(0) }}</td></tr>
+<tr class="cost-row"><td>Labour</td><td>£{{ month.cost_breakdown.labour | round(0) }}</td></tr>
+<tr class="cost-row"><td>Utilities</td><td>£{{ month.cost_breakdown.monthly_utilities | round(0) }}</td></tr>
+<tr class="cost-row"><td>Changeover</td><td>£{{ month.cost_breakdown.changeover | round(0) }}</td></tr>
+<tr class="cost-row"><td>Shipping</td><td>£{{ month.cost_breakdown.shipping | round(0) }}</td></tr>
+<tr class="cost-row"><td>Quality System</td><td>£{{ month.cost_breakdown.quality_system | round(0) }}</td></tr>
+<tr class="cost-row"><td>Machine Breakdown</td><td>£{{ month.cost_breakdown.machine_breakdown | round(0) }}</td></tr>
+<tr class="cost-row"><td>Employee Strike</td><td>£{{ month.cost_breakdown.employee_strike | round(0) }}</td></tr>
+<tr class="cost-row"><td>Extra Fixed Cost</td><td>£{{ month.cost_breakdown.extra_fixed_cost | round(0) }}</td></tr>
+<tr class="cost-row"><td>Quality System Change</td><td>£{{ month.cost_breakdown.quality_system_change_cost | round(0) }}</td></tr>
 {% endif %}
-
-<li><strong>Profit:</strong> £{{ month.profit | round(0) }}</li>
-
-<li><strong>Cash:</strong> £{{ month.cash | round(0) }}</li>
-
-<li><strong>Remaining Investment:</strong>
-£{{ month.remaining_investment_to_recover | round(0) }}
-</li>
-
-</ul>
+<tr><td>Profit</td><td>£{{ month.profit | round(0) }}</td></tr>
+<tr><td>Cash</td><td>£{{ month.cash | round(0) }}</td></tr>
+<tr><td>Remaining Investment</td><td>£{{ month.remaining_investment_to_recover | round(0) }}</td></tr>
+</table>
 
 {% endfor %}
 
