@@ -199,7 +199,7 @@ def create_session(
     from database import create_new_session
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     create_new_session(session_name, total_months)
 
@@ -363,7 +363,7 @@ def register_team(
     conn.commit()
     conn.close()
 
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/app", status_code=303)
 
 # ============================================================
 # DASHBOARD ROUTER
@@ -373,7 +373,7 @@ def register_team(
 def dashboard(user=Depends(get_current_user)):
 
     if not user:
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     if user["role"] == "teacher":
         return RedirectResponse("/teacher-dashboard", status_code=303)
@@ -392,7 +392,7 @@ def teacher_dashboard(
 ):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -606,7 +606,7 @@ def teacher_dashboard(
 def delete_team_route(team_id: str, user=Depends(get_current_user)):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     delete_team(team_id)
     return RedirectResponse("/teacher-dashboard", status_code=303)
@@ -620,7 +620,7 @@ def delete_team_route(team_id: str, user=Depends(get_current_user)):
 def team_dashboard(request: Request, user=Depends(get_current_user)):
 
     if not user or user["role"] != "team":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     from database import get_active_session, get_connection
     import json
@@ -781,7 +781,7 @@ def team_dashboard(request: Request, user=Depends(get_current_user)):
 
 @app.get("/logout")
 def logout():
-    response = RedirectResponse("/", status_code=303)
+    response = RedirectResponse("/app", status_code=303)
     response.delete_cookie("access_token")
     return response
 
@@ -793,7 +793,7 @@ def logout():
 def end_setup_phase(user=Depends(get_current_user)):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     from database import get_active_session
     import decision_engine as de
@@ -888,7 +888,7 @@ def end_setup_phase(user=Depends(get_current_user)):
 async def submit_decisions(request: Request, user=Depends(get_current_user)):
 
     if not user or user["role"] != "team":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     from database import get_active_session
     from decision_engine import apply_student_decisions
@@ -1111,7 +1111,7 @@ def run_current_month_for_all_teams(session_id, current_month, scenario):
 def advance_month_route(user=Depends(get_current_user)):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     import json
     from database import get_active_session
@@ -1236,7 +1236,7 @@ def advance_month_route(user=Depends(get_current_user)):
 def factory_setup_page(request: Request, user=Depends(get_current_user)):
 
     if not user or user["role"] != "team":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     from database import get_active_session
 
@@ -1312,7 +1312,7 @@ def submit_factory_setup(
 ):
 
     if not user or user["role"] != "team":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     import decision_engine as de
     import json
@@ -1462,7 +1462,7 @@ def rename_team(
 ):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -1500,7 +1500,7 @@ def update_scenario(
 ):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -1558,7 +1558,7 @@ def update_scenario(
 def end_session(user=Depends(get_current_user)):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     from simulation_engine import run_month
     import json
@@ -1614,7 +1614,7 @@ def end_session(user=Depends(get_current_user)):
 def delete_session(user=Depends(get_current_user)):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -1654,7 +1654,7 @@ def delete_session(user=Depends(get_current_user)):
 def make_competitive(user=Depends(get_current_user)):
 
     if not user or user["role"] != "teacher":
-        return RedirectResponse("/", status_code=303)
+        return RedirectResponse("/app", status_code=303)
 
     active_session = get_active_session()
 
