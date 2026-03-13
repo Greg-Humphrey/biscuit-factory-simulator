@@ -254,6 +254,7 @@ table {
 
 <tr>
 <th>Team</th>
+<th>Quality System</th>
 <th>Produced</th>
 <th>Sold</th>
 <th>Revenue</th>
@@ -270,6 +271,7 @@ table {
 <tr>
 
 <td>{{ row.team }}</td>
+<td>{{ row.quality_system | upper if row.quality_system else "—" }}</td>
 <td>{{ row.units_produced }}</td>
 <td>{{ row.units_sold }}</td>
 <td>£{{ row.revenue | round(0) }}</td>

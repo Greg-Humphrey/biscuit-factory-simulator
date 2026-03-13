@@ -570,6 +570,7 @@ def teacher_dashboard(
                     "team": team_name,
                     "auto_built": meta.get("auto_built", False),
                     "auto_submitted": month in meta.get("auto_submitted_months", []),
+                    "quality_system": report.get("quality_system", ""),
                     "units_produced": report["units_produced"],
                     "units_sold": report["units_sold"],
                     "revenue": report["revenue"],

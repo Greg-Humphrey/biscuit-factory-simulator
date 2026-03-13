@@ -407,6 +407,7 @@ def run_month(state,scenario):
     report = {
         "month": state["month"],
         "scenario": scenario["name"],
+        "quality_system": state["factory"].get("quality_system", ""),
         "units_produced": results["units_produced"],
         "units_sold": results["units_sold"],
         "revenue": results["revenue"],
