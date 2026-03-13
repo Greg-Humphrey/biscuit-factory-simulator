@@ -3,7 +3,8 @@ import json
 import uuid
 from datetime import datetime
 
-DB_NAME = "simulator.db"
+import os
+DB_NAME = os.environ.get("DB_PATH", "/data/simulator.db")
 
 
 def init_db():

@@ -1,0 +1,5 @@
+simulator.db
+__pycache__/
+*.pyc
+temp_reports/
+simulation_reports.zip
