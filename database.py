@@ -285,3 +285,98 @@ def save_team_simulation_state(team_id, state):
 
     conn.commit()
     conn.close()
+
+
+def build_team_financials(session_id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT team_id, team_name
+        FROM teams
+        WHERE role = 'team' AND session_id = ?
+    """, (session_id,))
+
+    teams = cursor.fetchall()
+
+    team_financials = []
+
+    for team_id, team_name in teams:
+
+        cursor.execute(
+            "SELECT simulation FROM teams WHERE team_id = ?",
+            (team_id,)
+        )
+
+        result = cursor.fetchone()
+
+        if result and result[0]:
+
+            simulation = json.loads(result[0])
+
+            history = simulation.get("history", [])
+
+            total_units_produced = 0
+            total_units_sold = 0
+            total_revenue = 0
+            total_ingredient_cost = 0
+            total_labour_cost = 0
+            total_overheads = 0
+
+            for month in history:
+
+                total_units_produced += month.get("units_produced", 0)
+                total_units_sold += month.get("units_sold", 0)
+                total_revenue += month.get("revenue", 0)
+                cost_breakdown = month.get("cost_breakdown", {})
+                total_ingredient_cost += cost_breakdown.get("ingredients", 0)
+                total_labour_cost += cost_breakdown.get("labour", 0)
+                total_overheads += (
+                    cost_breakdown.get("changeover", 0)
+                    + cost_breakdown.get("shipping", 0)
+                    + cost_breakdown.get("quality_system", 0)
+                    + cost_breakdown.get("monthly_utilities", 0)
+                    + cost_breakdown.get("machine_breakdown", 0)
+                    + cost_breakdown.get("employee_strike", 0)
+                    + cost_breakdown.get("extra_fixed_cost", 0)
+                    + cost_breakdown.get("quality_system_change_cost", 0)
+                )
+
+            margin = 0
+            if total_revenue > 0:
+                margin = (total_revenue - (total_ingredient_cost + total_labour_cost)) / total_revenue
+
+            team_financials.append({
+                "id": team_id,
+                "name": team_name,
+                "initial_investment": simulation.get("total_initial_investment", 0),
+                "unused_capital": simulation.get("unused_capital", 0),
+                "remaining_investment": simulation.get("investment_outstanding", 0),
+                "cumulative_profit": simulation.get("cumulative_profit", 0),
+                "cash": simulation.get("cash", 0),
+                "total_units_produced": total_units_produced,
+                "total_units_sold": total_units_sold,
+                "margin": margin,
+                "overheads": total_overheads,
+            })
+
+        else:
+
+            team_financials.append({
+                "id": team_id,
+                "name": team_name,
+                "initial_investment": 0,
+                "unused_capital": 0,
+                "remaining_investment": 0,
+                "cumulative_profit": 0,
+                "cash": 0,
+                "total_units_produced": 0,
+                "total_units_sold": 0,
+                "margin": 0,
+                "overheads": 0,
+            })
+
+    conn.close()
+
+    return team_financials

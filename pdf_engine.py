@@ -2,10 +2,9 @@ import os
 import json
 import zipfile
 from datetime import datetime
-from database import get_connection
+from database import get_connection, get_active_session, build_team_financials
 from weasyprint import HTML
 from jinja2 import Environment, FileSystemLoader
-from database import get_active_session
 from scenario_engine import DEFAULT_SCENARIO
 
 env = Environment(loader=FileSystemLoader("templates"))
@@ -18,7 +17,7 @@ def generate_teacher_pdf(session_data, folder):
 
     pdf_path = os.path.join(folder, "teacher_dashboard.pdf")
 
-    HTML(string=html).write_pdf(pdf_path)
+    HTML(string=html, base_url=os.path.abspath(".")).write_pdf(pdf_path)
 
     return pdf_path
 
@@ -31,7 +30,7 @@ def generate_team_pdf(team_data, folder):
     filename = f"{team_data['team_name']}_dashboard.pdf"
     pdf_path = os.path.join(folder, filename)
 
-    HTML(string=html).write_pdf(pdf_path)
+    HTML(string=html, base_url=os.path.abspath(".")).write_pdf(pdf_path)
 
     return pdf_path
 
@@ -198,7 +197,8 @@ def build_team_dashboard_data(team):
         "team_name": team["team_name"],
         "simulation": team["simulation"],
         "active_session": active_session,
-        "team_financials": build_team_financials(active_session[0])
+        "team_financials": build_team_financials(active_session[0]),
+        "current_team_id": team["team_id"]
     }
 
 def generate_all_reports(session_id):
