@@ -86,6 +86,12 @@ from fastapi.responses import HTMLResponse
 
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
+    host = request.headers.get("host", "")
+
+    # Redirect legacy sim. subdomain to the main platform
+    if host.startswith("sim."):
+        return RedirectResponse(url="https://simprentice.com/app")
+
     return templates.TemplateResponse(
         "marketing/homepage.html",
         {"request": request}
