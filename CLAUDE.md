@@ -9,10 +9,13 @@ Educational operations management simulator for A-Level business students. Stude
 - Deploy: push to GitHub main branch (Railway deploys automatically via GitHub integration)
 
 ## Deployment
-- Hosted on Railway, deployed automatically from GitHub (main branch)
-- Live domain: https://sim.simprentice.com/
-- SQLite database (simulator.db) — note: Railway volumes may reset on redeploy, so treat the DB as ephemeral unless a persistent volume is configured
-- Environment variables: JWT_SECRET
+- Hosted on Railway, deployed automatically from GitHub
+- Production: main branch → simprentice.com (marketing) + sim.simprentice.com redirects to /app
+- Staging/dev: dev branch → Railway dev service (separate URL)
+- Both environments have Railway persistent volumes mounted at /data
+- SQLite database stored at /data/simulator.db (set via DB_PATH env var)
+- SECRET_KEY for JWT is hardcoded in auth.py (not an env var — this is intentional for now)
+- NO_CACHE=1 is a shared env var on both Railway services
 
 ## Architecture Summary
 - FastAPI backend (api.py is the main entry point)
@@ -22,6 +25,34 @@ Educational operations management simulator for A-Level business students. Stude
 - PDF reports generated via WeasyPrint (pdf_engine.py)
 - Teams progress through setup → operating phases; factory locked after setup
 - Teacher controls global month advancement for all teams
+
+## Routing
+- / → always serves marketing homepage (templates/marketing/homepage.html)
+- /app → simulator entry point (templates/home.html)
+- sim.simprentice.com redirects to simprentice.com/app
+- All internal redirects and the Home nav link point to /app, not /
+
+## Multi-Device Compatibility (Long-Term Goal)
+Greg wants the app to be fully compatible across phone, tablet, laptop, and large displays.
+This is a future goal — not being built now — but every new UI component should be written
+with responsiveness in mind to avoid large rework later. Specifically:
+- Always add `<meta name="viewport" content="width=device-width, initial-scale=1">` to new pages
+- Prefer CSS flexbox or grid over fixed-width layouts
+- Avoid hardcoded pixel widths on containers — use percentages or max-width
+- Tables are the hardest problem on mobile; when building new tables consider whether
+  the data could work as cards or stacked rows on small screens
+- The factory setup builder and wide teacher dashboard tables are known problem areas
+  that will need dedicated mobile work when the time comes
+- Do not retrofit existing pages unprompted — only apply responsive patterns to new work
+
+## Future Platform Vision
+Simprentice is planned to become a multi-product SaaS platform:
+- Teachers self-register and get isolated accounts with their own simulator instances
+- Students access teacher sessions without logging in (as teams, same as today)
+- Each teacher's data is fully isolated from other teachers
+- Additional simulators beyond the Biscuit Factory will be separate apps sharing a login
+- This is a future project — do not pre-build it, but avoid architectural decisions
+  that would make it harder to introduce later
 
 ## Giving Greg Instructions
 - Greg is a novice coder with limited computer science knowledge
