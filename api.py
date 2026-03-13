@@ -86,17 +86,13 @@ from fastapi.responses import HTMLResponse
 
 @app.get("/", response_class=HTMLResponse)
 def homepage(request: Request):
+    return templates.TemplateResponse(
+        "marketing/homepage.html",
+        {"request": request}
+    )
 
-    host = request.headers.get("host", "")
-
-    # Show marketing homepage only on the main marketing domain (not sim. subdomain)
-    if "simprentice.com" in host and not host.startswith("sim."):
-        return templates.TemplateResponse(
-            "marketing/homepage.html",
-            {"request": request}
-        )
-
-    # All other domains (sim., Railway dev URLs, localhost, etc.) go straight to simulator
+@app.get("/app", response_class=HTMLResponse)
+def simulator(request: Request):
     return templates.TemplateResponse(
         "home.html",
         {"request": request}
