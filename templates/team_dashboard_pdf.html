@@ -39,6 +39,7 @@ table {
 
 <h2>Simulation Session</h2>
 
+<p><strong>Name:</strong> {{ active_session[1] }}</p>
 <p><strong>Status:</strong> {{ active_session[2] }}</p>
 <p><strong>Current Month:</strong> {{ active_session[3] }}</p>
 <p><strong>Total Months:</strong> {{ active_session[4] }}</p>
@@ -98,17 +99,9 @@ table {
 <tr>
 <td>Production Lines</td>
 <td>
-
-{% set counts = {} %}
 {% for line in factory.get("lines", []) %}
-{% set t = line.get("process_type") %}
-{% set _ = counts.update({t: counts.get(t, 0) + 1}) %}
+<div>Line {{ loop.index }}: {{ line.get("process_type") | capitalize }}</div>
 {% endfor %}
-
-{% for process, count in counts.items() %}
-<div>{{ count }} × {{ process }}</div>
-{% endfor %}
-
 </td>
 </tr>
 
@@ -127,7 +120,59 @@ table {
 
 <h2>Factory Performance</h2>
 
-{% include "components/team_performance_table.html" %}
+{% for team in team_financials if team["id"]|string == current_team_id|string %}
+
+<h3>💰 Financial Performance</h3>
+
+<table>
+<thead>
+<tr>
+<th>Profit</th>
+<th>Gross Profit Margin</th>
+<th>Cash</th>
+<th>Remaining Investment</th>
+<th>Overheads</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>£{{ team.cumulative_profit | round(0) }}</td>
+<td>{{ (team.margin * 100) | round(1) }}%</td>
+<td>£{{ team.cash | round(0) }}</td>
+<td>£{{ team.remaining_investment | round(0) }}</td>
+<td>£{{ team.overheads | round(0) }}</td>
+</tr>
+</tbody>
+</table>
+
+<h3>🏭 Production Performance</h3>
+
+<table>
+<thead>
+<tr>
+<th>Total Units Produced</th>
+<th>Total Units Sold</th>
+<th>Units Not Sold</th>
+<th>% Wastage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>{{ team.total_units_produced | round(0) }}</td>
+<td>{{ team.total_units_sold | round(0) }}</td>
+<td>{{ (team.total_units_produced - team.total_units_sold) | round(0) }}</td>
+<td>
+{% if team.total_units_produced > 0 %}
+{{ (((team.total_units_produced - team.total_units_sold) / team.total_units_produced) * 100) | round(1) }}%
+{% else %}
+0%
+{% endif %}
+</td>
+</tr>
+</tbody>
+</table>
+
+{% endfor %}
 
 <hr>
 
