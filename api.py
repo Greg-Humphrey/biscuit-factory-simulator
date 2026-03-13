@@ -89,16 +89,16 @@ def homepage(request: Request):
 
     host = request.headers.get("host", "")
 
-    # If the user is on the simulator subdomain
-    if host.startswith("sim."):
+    # Show marketing homepage only on the main marketing domain (not sim. subdomain)
+    if "simprentice.com" in host and not host.startswith("sim."):
         return templates.TemplateResponse(
-            "home.html",
+            "marketing/homepage.html",
             {"request": request}
         )
 
-    # Otherwise show the marketing homepage
+    # All other domains (sim., Railway dev URLs, localhost, etc.) go straight to simulator
     return templates.TemplateResponse(
-        "marketing/homepage.html",
+        "home.html",
         {"request": request}
     )
 
