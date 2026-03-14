@@ -10,6 +10,7 @@ from auth import create_access_token, get_current_user, authenticate_user
 from templates_config import templates
 from database import (
     get_connection,
+    get_db,
     register_teacher,
     authenticate_teacher_by_email,
     get_active_session_for_teacher,
@@ -44,14 +45,13 @@ def simulator_hub(request: Request, user=Depends(get_current_user)):
 
     active_session = get_active_session_for_teacher(user["team_id"])
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT COUNT(*) FROM simulation_sessions WHERE teacher_id = ?",
-        (user["team_id"],)
-    )
-    total_sessions = cursor.fetchone()[0]
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM simulation_sessions WHERE teacher_id = ?",
+            (user["team_id"],)
+        )
+        total_sessions = cursor.fetchone()[0]
 
     return templates.TemplateResponse(
         "platform/simulator_hub.html",
@@ -213,11 +213,10 @@ def session_landing(request: Request, code: str):
             {"request": request, "error": "That code wasn't recognised. Check with your teacher."}
         )
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT team_name FROM teams WHERE team_id = ?", (session[6],))
-    teacher_row = cursor.fetchone()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT team_name FROM teams WHERE team_id = ?", (session[6],))
+        teacher_row = cursor.fetchone()
 
     teacher_first_name = ""
     if teacher_row and teacher_row[0]:

@@ -46,11 +46,11 @@ ingredients = {
 biscuits = {
     "custom_iced": {
         "recipe": {
-            "flour": 400,
-            "eggs": 80,
-            "sugar": 150,
-            "icing": 250,
-            "butter": 120
+            "flour": 60,
+            "eggs": 10,
+            "sugar": 25,
+            "icing": 20,
+            "butter": 30,
         },
         "monthly_demand": 110000,
         "batch_price": 1800
@@ -58,9 +58,10 @@ biscuits = {
 
     "shortbread": {
         "recipe": {
-            "flour": 500,
-            "sugar": 170,
-            "butter": 330
+            "flour": 65,
+            "eggs": 5,
+            "sugar": 20,
+            "butter": 45
         },
         "monthly_demand": 75000,
         "batch_price": 2700
@@ -68,10 +69,10 @@ biscuits = {
 
     "gluten_free": {
         "recipe": {
-            "gluten_free_flour": 550,
-            "eggs": 30,
-            "sugar": 200,
-            "vegetable_oil": 220
+            "gluten_free_flour": 65,
+            "eggs": 10,
+            "sugar": 25,
+            "vegetable_oil": 40
         },
         "monthly_demand": 90000,
         "batch_price": 2300
@@ -79,10 +80,11 @@ biscuits = {
 
     "gingerbread": {
         "recipe": {
-            "flour": 560,
-            "eggs": 40,
-            "sugar": 180,
-            "treacle": 220
+            "flour": 55,
+            "eggs": 8,
+            "sugar": 20,
+            "butter": 30,
+            "treacle": 15
         },
         "monthly_demand": 200000,
         "batch_price": 1000
@@ -90,9 +92,10 @@ biscuits = {
 
     "digestive": {
         "recipe": {
-            "flour": 680,
-            "sugar": 180,
-            "vegetable_oil": 140
+            "flour": 65,
+            "eggs": 8,
+            "sugar": 15,
+            "vegetable_oil": 40
         },
         "monthly_demand": 220000,
         "batch_price": 900
@@ -100,10 +103,11 @@ biscuits = {
 
     "custard_creams": {
         "recipe": {
-            "flour": 500,
-            "sugar": 180,
-            "icing": 200,
-            "vegetable_fat": 120
+            "flour": 55,
+            "eggs": 6,
+            "sugar": 20,
+            "icing": 25,
+            "vegetable_fat": 450
         },
         "monthly_demand": 180000,
         "batch_price": 1100
@@ -111,9 +115,10 @@ biscuits = {
 
     "rich_tea": {
         "recipe": {
-            "flour": 740,
-            "sugar": 160,
-            "vegetable_oil": 100
+            "flour": 70,
+            "eggs": 6,
+            "sugar": 15,
+            "vegetable_oil": 30
         },
         "monthly_demand": 235000,
         "batch_price": 850

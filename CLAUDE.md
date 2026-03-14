@@ -14,7 +14,7 @@ Educational operations management simulator for A-Level business students. Stude
 - Staging/dev: dev branch → Railway dev service (separate URL)
 - Both environments have Railway persistent volumes mounted at /data
 - SQLite database stored at /data/simulator.db (set via DB_PATH env var)
-- SECRET_KEY for JWT is hardcoded in auth.py (not an env var — this is intentional for now)
+- SECRET_KEY for JWT is read from the SECRET_KEY env var (set in Railway; locally via .env file)
 - NO_CACHE=1 is a shared env var on both Railway services
 
 ## Architecture Summary
@@ -27,10 +27,10 @@ Educational operations management simulator for A-Level business students. Stude
 - Teacher controls global month advancement for all teams
 
 ## Routing
-- / → always serves marketing homepage (templates/marketing/homepage.html)
-- /app → simulator entry point (templates/home.html)
+- / → always serves marketing homepage (templates/platform/marketing/homepage.html)
+- /app → redirects to /student (kept for old bookmarks)
 - sim.simprentice.com redirects to simprentice.com/app
-- All internal redirects and the Home nav link point to /app, not /
+- All internal redirects and the Simprentice brand link point to /, not /app
 
 ## Multi-Device Compatibility (Long-Term Goal)
 Greg wants the app to be fully compatible across phone, tablet, laptop, and large displays.
@@ -76,6 +76,28 @@ Simprentice is planned to become a multi-product SaaS platform:
 - Self-service school registration is the long-term vision but not being built now
 - Automatic licence management (renewals, provisioning) is a future scaling concern — ignore for now
 - Licence data should be added to the DB schema so the foundation is there without over-engineering the workflows
+
+## Technical Backlog
+
+Improvements agreed on but not yet built. Work through these before scaling to multiple teachers.
+
+### Error handling
+Add FastAPI exception handlers in `api.py` for 404 and 500 errors, serving a simple friendly error page rather than a raw stack trace. FastAPI supports `@app.exception_handler(404)` etc.
+
+### Logging
+Add Python's standard `logging` module. At minimum log errors and key events (session created, team registered, month advanced). Railway captures stdout so no extra infrastructure needed. Add to `api.py` and call `logging.info/error` in the routers.
+
+### Tests
+Add `pytest` with FastAPI's built-in `TestClient`. Start with the most critical paths: session creation, team registration, month advancement. Even 10 tests would catch most regressions. No full coverage needed yet.
+
+### Alembic (database migrations)
+Replace the manual `PRAGMA table_info` migration checks in `init_db()` with Alembic versioned migration files. This gives rollbacks, a clear schema history, and is the standard approach. Do this before the data model grows much further.
+
+### SQLAlchemy ORM
+Replace raw SQL strings throughout `database.py` with SQLAlchemy models. Integrates cleanly with Alembic and makes a future switch to PostgreSQL almost trivial (change one line). Larger investment — do after Alembic is in place.
+
+### PostgreSQL
+Migrate from SQLite to PostgreSQL before onboarding the first external teacher. Railway has a native PostgreSQL plugin that injects a `DATABASE_URL` env var automatically. SQLAlchemy ORM makes the switch near-painless. SQLite is fine for single-teacher use.
 
 ## Giving Greg Instructions
 - Greg is a novice coder with limited computer science knowledge

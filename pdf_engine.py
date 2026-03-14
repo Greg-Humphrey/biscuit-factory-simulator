@@ -2,7 +2,7 @@ import os
 import json
 import zipfile
 from datetime import datetime
-from database import get_connection, get_active_session, build_team_financials
+from database import get_connection, get_db, get_active_session, build_team_financials
 from weasyprint import HTML
 from jinja2 import Environment, FileSystemLoader
 from scenario_engine import DEFAULT_SCENARIO
@@ -44,17 +44,16 @@ def create_reports_folder():
 
 def get_teams_for_session(session_id):
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT team_id, team_name, simulation
-        FROM teams
-        WHERE role = 'team' AND session_id = ?
-    """, (session_id,))
+        cursor.execute("""
+            SELECT team_id, team_name, simulation
+            FROM teams
+            WHERE role = 'team' AND session_id = ?
+        """, (session_id,))
 
-    rows = cursor.fetchall()
-    conn.close()
+        rows = cursor.fetchall()
 
     teams = []
 
@@ -72,112 +71,110 @@ def get_teams_for_session(session_id):
 
 def build_teacher_dashboard_data(session_id):
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
     active_session = get_active_session()
 
     current_month = active_session[3]
     total_months = active_session[4]
 
-    # ----------------------------
-    # Load scenarios
-    # ----------------------------
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT scenario_state
-        FROM simulation_sessions
-        WHERE session_id = ?
-    """, (session_id,))
+        # ----------------------------
+        # Load scenarios
+        # ----------------------------
 
-    result = cursor.fetchone()
-
-    scenario_state = json.loads(result[0]) if result and result[0] else {}
-
-    scenarios = {}
-
-    for month in range(1, total_months + 1):
-
-        scenario = DEFAULT_SCENARIO.copy()
-
-        override = scenario_state.get(str(month))
-
-        if override:
-            scenario.update(override)
-
-        scenarios[str(month)] = scenario
-
-    # ----------------------------
-    # Teams
-    # ----------------------------
-
-    cursor.execute("""
-        SELECT team_id, team_name, password, meta
-        FROM teams
-        WHERE role='team' AND session_id=?
-    """, (session_id,))
-
-    raw_teams = cursor.fetchall()
-
-    teams = []
-
-    for team_id, team_name, password, meta_blob in raw_teams:
-
-        meta = json.loads(meta_blob) if meta_blob else {}
-
-        auto_built = meta.get("auto_built", False)
-
-        teams.append((team_id, team_name, password, auto_built))
-
-    team_count = len(teams)
-
-    # ----------------------------
-    # Financials
-    # ----------------------------
-
-    team_financials = build_team_financials(session_id)
-
-    # ----------------------------
-    # Monthly results
-    # ----------------------------
-
-    monthly_results = {}
-
-    for month in range(1, total_months + 1):
-        monthly_results[month] = []
-
-    for team_id, team_name, password, meta_blob in raw_teams:
-
-        meta = json.loads(meta_blob) if meta_blob else {}
-
-        cursor.execute(
-            "SELECT simulation FROM teams WHERE team_id = ?",
-            (team_id,)
-        )
+        cursor.execute("""
+            SELECT scenario_state
+            FROM simulation_sessions
+            WHERE session_id = ?
+        """, (session_id,))
 
         result = cursor.fetchone()
 
-        if result and result[0]:
+        scenario_state = json.loads(result[0]) if result and result[0] else {}
 
-            simulation = json.loads(result[0])
+        scenarios = {}
 
-            history = simulation.get("history", [])
+        for month in range(1, total_months + 1):
 
-            for report in history:
+            scenario = DEFAULT_SCENARIO.copy()
 
-                month = report["month"]
+            override = scenario_state.get(str(month))
 
-                monthly_results[month].append({
-                    "team": team_name,
-                    "quality_system": report.get("quality_system", ""),
-                    "units_produced": report["units_produced"],
-                    "units_sold": report["units_sold"],
-                    "revenue": report["revenue"],
-                    "total_cost": report["total_cost"],
-                    "profit": report["profit"]
-                })
+            if override:
+                scenario.update(override)
 
-    conn.close()
+            scenarios[str(month)] = scenario
+
+        # ----------------------------
+        # Teams
+        # ----------------------------
+
+        cursor.execute("""
+            SELECT team_id, team_name, password, meta
+            FROM teams
+            WHERE role='team' AND session_id=?
+        """, (session_id,))
+
+        raw_teams = cursor.fetchall()
+
+        teams = []
+
+        for team_id, team_name, password, meta_blob in raw_teams:
+
+            meta = json.loads(meta_blob) if meta_blob else {}
+
+            auto_built = meta.get("auto_built", False)
+
+            teams.append((team_id, team_name, password, auto_built))
+
+        team_count = len(teams)
+
+        # ----------------------------
+        # Financials
+        # ----------------------------
+
+        team_financials = build_team_financials(session_id)
+
+        # ----------------------------
+        # Monthly results
+        # ----------------------------
+
+        monthly_results = {}
+
+        for month in range(1, total_months + 1):
+            monthly_results[month] = []
+
+        for team_id, team_name, password, meta_blob in raw_teams:
+
+            meta = json.loads(meta_blob) if meta_blob else {}
+
+            cursor.execute(
+                "SELECT simulation FROM teams WHERE team_id = ?",
+                (team_id,)
+            )
+
+            result = cursor.fetchone()
+
+            if result and result[0]:
+
+                simulation = json.loads(result[0])
+
+                history = simulation.get("history", [])
+
+                for report in history:
+
+                    month = report["month"]
+
+                    monthly_results[month].append({
+                        "team": team_name,
+                        "quality_system": report.get("quality_system", ""),
+                        "units_produced": report["units_produced"],
+                        "units_sold": report["units_sold"],
+                        "revenue": report["revenue"],
+                        "total_cost": report["total_cost"],
+                        "profit": report["profit"]
+                    })
 
     return {
         "active_session": active_session,
@@ -194,11 +191,10 @@ def build_team_dashboard_data(team):
 
     active_session = get_active_session()
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT competitive_mode FROM simulation_sessions WHERE session_id = ?", (active_session[0],))
-    row = cursor.fetchone()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT competitive_mode FROM simulation_sessions WHERE session_id = ?", (active_session[0],))
+        row = cursor.fetchone()
     competitive_mode = bool(row[0]) if row else False
 
     return {

@@ -11,6 +11,7 @@ from auth import create_access_token, get_current_user
 from templates_config import templates
 from database import (
     get_connection,
+    get_db,
     delete_team,
     build_team_financials,
     get_active_session,
@@ -87,25 +88,21 @@ def register_team(
         )
 
     session_id = active_session[0]
-    conn = get_connection()
-    cursor = conn.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM teams WHERE team_name = ?", (team_name,))
-    if cursor.fetchone():
-        conn.close()
-        return templates.TemplateResponse(
-            "biscuit_factory/register.html",
-            {"request": request, "error": "Team name already exists."}
-        )
+        cursor.execute("SELECT * FROM teams WHERE team_name = ?", (team_name,))
+        if cursor.fetchone():
+            return templates.TemplateResponse(
+                "biscuit_factory/register.html",
+                {"request": request, "error": "Team name already exists."}
+            )
 
-    team_id = str(uuid.uuid4())
-    cursor.execute("""
-        INSERT INTO teams (team_id, team_name, password, role, simulation, meta, current_month, session_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (team_id, team_name, password, "team", json.dumps({}), json.dumps({}), 0, session_id))
-
-    conn.commit()
-    conn.close()
+        team_id = str(uuid.uuid4())
+        cursor.execute("""
+            INSERT INTO teams (team_id, team_name, password, role, simulation, meta, current_month, session_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (team_id, team_name, password, "team", json.dumps({}), json.dumps({}), 0, session_id))
 
     token = create_access_token({"team_id": team_id, "team_name": team_name, "role": "team"})
     response = RedirectResponse("/team-dashboard", status_code=303)
@@ -126,20 +123,19 @@ def teacher_dashboard(
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
     active_session = get_active_session_for_teacher(user["team_id"])
 
     competitive_mode = False
     if active_session:
-        cursor.execute(
-            "SELECT competitive_mode FROM simulation_sessions WHERE session_id = ?",
-            (active_session[0],)
-        )
-        result = cursor.fetchone()
-        if result and result[0]:
-            competitive_mode = True
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT competitive_mode FROM simulation_sessions WHERE session_id = ?",
+                (active_session[0],)
+            )
+            result = cursor.fetchone()
+            if result and result[0]:
+                competitive_mode = True
 
     scenario_state = {}
     current_month = 0
@@ -151,11 +147,13 @@ def teacher_dashboard(
         current_month = active_session[3]
         total_months = active_session[4]
 
-        cursor.execute(
-            "SELECT scenario_state FROM simulation_sessions WHERE session_id = ?",
-            (session_id,)
-        )
-        result = cursor.fetchone()
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT scenario_state FROM simulation_sessions WHERE session_id = ?",
+                (session_id,)
+            )
+            result = cursor.fetchone()
         if result and result[0]:
             scenario_state = json.loads(result[0])
 
@@ -177,15 +175,17 @@ def teacher_dashboard(
     if missing:
         missing_teams = missing.split(",")
 
+    raw_teams = []
     if active_session:
         session_id = active_session[0]
-        cursor.execute("""
-            SELECT team_id, team_name, password, meta
-            FROM teams
-            WHERE role = 'team' AND session_id = ?
-        """, (session_id,))
-
-    raw_teams = cursor.fetchall()
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT team_id, team_name, password, meta
+                FROM teams
+                WHERE role = 'team' AND session_id = ?
+            """, (session_id,))
+            raw_teams = cursor.fetchall()
 
     if active_session and active_session[2] == "active" and current_month > 1:
         for team_id, team_name, password, meta_blob in raw_teams:
@@ -206,8 +206,10 @@ def teacher_dashboard(
         auto_built = meta.get("auto_built", False)
         teams.append((team_id, team_name, password, auto_built))
 
-        cursor.execute("SELECT simulation FROM teams WHERE team_id = ?", (team_id,))
-        result = cursor.fetchone()
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT simulation FROM teams WHERE team_id = ?", (team_id,))
+            result = cursor.fetchone()
         if result and result[0]:
             simulation = json.loads(result[0])
             if simulation.get("production_plan"):
@@ -224,8 +226,10 @@ def teacher_dashboard(
 
         for team_id, team_name, password, meta_blob in raw_teams:
             meta = json.loads(meta_blob) if meta_blob else {}
-            cursor.execute("SELECT simulation FROM teams WHERE team_id = ?", (team_id,))
-            result = cursor.fetchone()
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT simulation FROM teams WHERE team_id = ?", (team_id,))
+                result = cursor.fetchone()
             if result and result[0]:
                 simulation = json.loads(result[0])
                 for report in simulation.get("history", []):
@@ -241,8 +245,6 @@ def teacher_dashboard(
                         "total_cost": report["total_cost"],
                         "profit": report["profit"]
                     })
-
-    conn.close()
 
     join_code = active_session[5] if active_session else None
 
@@ -298,26 +300,24 @@ def team_dashboard(request: Request, user=Depends(get_current_user)):
     team_financials = []
 
     if active_session:
-        conn = get_connection()
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT competitive_mode FROM simulation_sessions WHERE session_id = ?",
+                (active_session[0],)
+            )
+            result = cursor.fetchone()
+            if result and result[0]:
+                competitive_mode = True
+        team_financials = build_team_financials(active_session[0])
+
+    with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT competitive_mode FROM simulation_sessions WHERE session_id = ?",
-            (active_session[0],)
+            "SELECT team_name, simulation, meta FROM teams WHERE team_id = ?",
+            (user["team_id"],)
         )
-        result = cursor.fetchone()
-        if result and result[0]:
-            competitive_mode = True
-        team_financials = build_team_financials(active_session[0])
-        conn.close()
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT team_name, simulation, meta FROM teams WHERE team_id = ?",
-        (user["team_id"],)
-    )
-    team = cursor.fetchone()
-    conn.close()
+        team = cursor.fetchone()
 
     simulation = None
     meta = {}
@@ -394,46 +394,44 @@ def end_setup_phase(user=Depends(get_current_user)):
         return RedirectResponse("/teacher-dashboard", status_code=303)
 
     session_id = active_session[0]
-    conn = get_connection()
-    cursor = conn.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT team_id, meta FROM teams WHERE role = 'team' AND session_id = ?",
-        (session_id,)
-    )
-    teams = cursor.fetchall()
-    manager = SimulationManager()
-
-    for team_id, meta_blob in teams:
-        meta = json.loads(meta_blob) if meta_blob else {}
-        if not meta.get("setup_complete"):
-            state, message = de.create_simulation_from_initial_decisions(manager.default_setup)
-            if state is None:
-                meta["setup_complete"] = True
-                meta["auto_built"] = True
-                meta["submitted"] = True
-            else:
-                cursor.execute(
-                    "UPDATE teams SET simulation = ? WHERE team_id = ?",
-                    (json.dumps(state), team_id)
-                )
-                meta["setup_complete"] = True
-                meta["auto_built"] = True
-                meta["submitted"] = True
-        else:
-            meta["auto_built"] = False
-            meta["submitted"] = True
         cursor.execute(
-            "UPDATE teams SET meta = ? WHERE team_id = ?",
-            (json.dumps(meta), team_id)
+            "SELECT team_id, meta FROM teams WHERE role = 'team' AND session_id = ?",
+            (session_id,)
         )
+        teams = cursor.fetchall()
+        manager = SimulationManager()
 
-    cursor.execute("""
-        UPDATE simulation_sessions SET status = 'active', current_month = 1
-        WHERE session_id = ?
-    """, (session_id,))
-    conn.commit()
-    conn.close()
+        for team_id, meta_blob in teams:
+            meta = json.loads(meta_blob) if meta_blob else {}
+            if not meta.get("setup_complete"):
+                state, message = de.create_simulation_from_initial_decisions(manager.default_setup)
+                if state is None:
+                    meta["setup_complete"] = True
+                    meta["auto_built"] = True
+                    meta["submitted"] = True
+                else:
+                    cursor.execute(
+                        "UPDATE teams SET simulation = ? WHERE team_id = ?",
+                        (json.dumps(state), team_id)
+                    )
+                    meta["setup_complete"] = True
+                    meta["auto_built"] = True
+                    meta["submitted"] = True
+            else:
+                meta["auto_built"] = False
+                meta["submitted"] = True
+            cursor.execute(
+                "UPDATE teams SET meta = ? WHERE team_id = ?",
+                (json.dumps(meta), team_id)
+            )
+
+        cursor.execute("""
+            UPDATE simulation_sessions SET status = 'active', current_month = 1
+            WHERE session_id = ?
+        """, (session_id,))
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
 
@@ -454,15 +452,15 @@ async def submit_decisions(request: Request, user=Depends(get_current_user)):
     if not active_session:
         return RedirectResponse("/team-dashboard", status_code=303)
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT simulation, meta FROM teams WHERE team_id = ?",
-        (user["team_id"],)
-    )
-    result = cursor.fetchone()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT simulation, meta FROM teams WHERE team_id = ?",
+            (user["team_id"],)
+        )
+        result = cursor.fetchone()
+
     if not result:
-        conn.close()
         return RedirectResponse("/team-dashboard", status_code=303)
 
     state = json.loads(result[0])
@@ -502,7 +500,6 @@ async def submit_decisions(request: Request, user=Depends(get_current_user)):
         process_limits = []
         for line in state.get("factory", {}).get("lines", []):
             process_limits.append(pp.get_process_limits(line["process_type"]))
-        conn.close()
         return templates.TemplateResponse(
             "biscuit_factory/team_dashboard.html",
             {
@@ -519,18 +516,18 @@ async def submit_decisions(request: Request, user=Depends(get_current_user)):
             }
         )
 
-    cursor.execute(
-        "UPDATE teams SET simulation = ? WHERE team_id = ?",
-        (json.dumps(state), user["team_id"])
-    )
-    meta["submitted"] = True
-    meta["decision_month"] = state["month"]
-    cursor.execute(
-        "UPDATE teams SET meta = ? WHERE team_id = ?",
-        (json.dumps(meta), user["team_id"])
-    )
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE teams SET simulation = ? WHERE team_id = ?",
+            (json.dumps(state), user["team_id"])
+        )
+        meta["submitted"] = True
+        meta["decision_month"] = state["month"]
+        cursor.execute(
+            "UPDATE teams SET meta = ? WHERE team_id = ?",
+            (json.dumps(meta), user["team_id"])
+        )
     return RedirectResponse("/team-dashboard", status_code=303)
 
 
@@ -539,45 +536,43 @@ async def submit_decisions(request: Request, user=Depends(get_current_user)):
 # ============================================================
 
 def run_current_month_for_all_teams(session_id, current_month, scenario):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT team_id, team_name, meta FROM teams WHERE role = 'team' AND session_id = ?",
-        (session_id,)
-    )
-    teams = cursor.fetchall()
-    updated_meta = {}
-
-    for team_id, team_name, meta_blob in teams:
-        meta = json.loads(meta_blob) if meta_blob else {}
-        cursor.execute("SELECT simulation FROM teams WHERE team_id = ?", (team_id,))
-        sim_blob = cursor.fetchone()[0]
-        if not sim_blob:
-            continue
-        state = json.loads(sim_blob)
-        if current_month > 1 and not meta.get("submitted"):
-            if "auto_submitted_months" not in meta:
-                meta["auto_submitted_months"] = []
-            meta["auto_submitted_months"].append(current_month)
-        success, result = sim.run_month(state, scenario)
-        if not success:
-            print(f"Simulation error for {team_name}: {result}")
-            continue
+    with get_db() as conn:
+        cursor = conn.cursor()
         cursor.execute(
-            "UPDATE teams SET simulation = ? WHERE team_id = ?",
-            (json.dumps(state), team_id)
+            "SELECT team_id, team_name, meta FROM teams WHERE role = 'team' AND session_id = ?",
+            (session_id,)
         )
-        updated_meta[team_id] = meta
+        teams = cursor.fetchall()
+        updated_meta = {}
 
-    for team_id, meta in updated_meta.items():
-        meta["submitted"] = False
-        meta["decision_month"] = None
-        cursor.execute(
-            "UPDATE teams SET meta = ? WHERE team_id = ?",
-            (json.dumps(meta), team_id)
-        )
-    conn.commit()
-    conn.close()
+        for team_id, team_name, meta_blob in teams:
+            meta = json.loads(meta_blob) if meta_blob else {}
+            cursor.execute("SELECT simulation FROM teams WHERE team_id = ?", (team_id,))
+            sim_blob = cursor.fetchone()[0]
+            if not sim_blob:
+                continue
+            state = json.loads(sim_blob)
+            if current_month > 1 and not meta.get("submitted"):
+                if "auto_submitted_months" not in meta:
+                    meta["auto_submitted_months"] = []
+                meta["auto_submitted_months"].append(current_month)
+            success, result = sim.run_month(state, scenario)
+            if not success:
+                print(f"Simulation error for {team_name}: {result}")
+                continue
+            cursor.execute(
+                "UPDATE teams SET simulation = ? WHERE team_id = ?",
+                (json.dumps(state), team_id)
+            )
+            updated_meta[team_id] = meta
+
+        for team_id, meta in updated_meta.items():
+            meta["submitted"] = False
+            meta["decision_month"] = None
+            cursor.execute(
+                "UPDATE teams SET meta = ? WHERE team_id = ?",
+                (json.dumps(meta), team_id)
+            )
 
 
 # ============================================================
@@ -599,21 +594,22 @@ def advance_month_route(user=Depends(get_current_user)):
     final_month = current_month == total_months
     next_month = current_month + 1
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT scenario_state FROM simulation_sessions WHERE session_id = ?",
-        (session_id,)
-    )
-    scenario_blob = cursor.fetchone()[0]
-    scenario_state = json.loads(scenario_blob) if scenario_blob else {}
-    scenario = scenario_state.get(str(current_month), DEFAULT_SCENARIO)
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT scenario_state FROM simulation_sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        scenario_blob = cursor.fetchone()[0]
+        scenario_state = json.loads(scenario_blob) if scenario_blob else {}
+        scenario = scenario_state.get(str(current_month), DEFAULT_SCENARIO)
 
-    cursor.execute(
-        "SELECT team_id, team_name, password, meta FROM teams WHERE role = 'team' AND session_id = ?",
-        (session_id,)
-    )
-    teams = cursor.fetchall()
+        cursor.execute(
+            "SELECT team_id, team_name, password, meta FROM teams WHERE role = 'team' AND session_id = ?",
+            (session_id,)
+        )
+        teams = cursor.fetchall()
+
     missing_teams = []
     for team_id, team_name, password, meta_blob in teams:
         meta = json.loads(meta_blob) if meta_blob else {}
@@ -621,29 +617,25 @@ def advance_month_route(user=Depends(get_current_user)):
             missing_teams.append(team_name)
 
     if current_month == 1 and missing_teams:
-        conn.close()
         return RedirectResponse(
             f"/teacher-dashboard?missing={','.join(missing_teams)}",
             status_code=303
         )
 
-    conn.close()
     run_current_month_for_all_teams(session_id, current_month, scenario)
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    if final_month:
-        cursor.execute(
-            "UPDATE simulation_sessions SET status = 'finished' WHERE session_id = ?",
-            (session_id,)
-        )
-    else:
-        cursor.execute(
-            "UPDATE simulation_sessions SET current_month = ? WHERE session_id = ?",
-            (next_month, session_id)
-        )
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        if final_month:
+            cursor.execute(
+                "UPDATE simulation_sessions SET status = 'finished' WHERE session_id = ?",
+                (session_id,)
+            )
+        else:
+            cursor.execute(
+                "UPDATE simulation_sessions SET current_month = ? WHERE session_id = ?",
+                (next_month, session_id)
+            )
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
 
@@ -660,24 +652,22 @@ def factory_setup_page(request: Request, user=Depends(get_current_user)):
     if not active_session or active_session[2] != "setup":
         return RedirectResponse("/team-dashboard", status_code=303)
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT team_name, meta FROM teams WHERE team_id = ?",
-        (user["team_id"],)
-    )
-    result = cursor.fetchone()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT team_name, meta FROM teams WHERE team_id = ?",
+            (user["team_id"],)
+        )
+        result = cursor.fetchone()
+
     if not result:
-        conn.close()
         return RedirectResponse("/team-dashboard", status_code=303)
 
     team_name, meta_blob = result
     meta = json.loads(meta_blob) if meta_blob else {}
     if meta.get("setup_complete"):
-        conn.close()
         return RedirectResponse("/team-dashboard", status_code=303)
 
-    conn.close()
     return templates.TemplateResponse(
         "biscuit_factory/factory_setup.html",
         {"request": request, "team_name": team_name, "user": user}
@@ -710,8 +700,6 @@ def submit_factory_setup(
 
     import decision_engine as de
 
-    conn = get_connection()
-    cursor = conn.cursor()
     team_id = user["team_id"]
 
     production_lines = (["job"] * job + ["batch"] * batch +
@@ -732,9 +720,10 @@ def submit_factory_setup(
     state, message = de.create_simulation_from_initial_decisions(setup_data)
 
     if state is None:
-        cursor.execute("SELECT team_name FROM teams WHERE team_id = ?", (team_id,))
-        team_name = cursor.fetchone()[0]
-        conn.close()
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT team_name FROM teams WHERE team_id = ?", (team_id,))
+            team_name = cursor.fetchone()[0]
         mapping = {
             "floor_slabs": "Floor slabs — not enough",
             "roof_panels": "Roof panels — not enough",
@@ -760,22 +749,22 @@ def submit_factory_setup(
     active_session = get_session_for_team(user["team_id"])
     state["max_months"] = active_session[4]
 
-    cursor.execute(
-        "UPDATE teams SET simulation = ? WHERE team_id = ?",
-        (json.dumps(state), team_id)
-    )
-    cursor.execute("SELECT meta FROM teams WHERE team_id = ?", (team_id,))
-    meta_blob = cursor.fetchone()[0]
-    meta = json.loads(meta_blob) if meta_blob else {}
-    meta["submitted"] = True
-    meta["setup_complete"] = True
-    meta["auto_built"] = False
-    cursor.execute(
-        "UPDATE teams SET meta = ? WHERE team_id = ?",
-        (json.dumps(meta), team_id)
-    )
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE teams SET simulation = ? WHERE team_id = ?",
+            (json.dumps(state), team_id)
+        )
+        cursor.execute("SELECT meta FROM teams WHERE team_id = ?", (team_id,))
+        meta_blob = cursor.fetchone()[0]
+        meta = json.loads(meta_blob) if meta_blob else {}
+        meta["submitted"] = True
+        meta["setup_complete"] = True
+        meta["auto_built"] = False
+        cursor.execute(
+            "UPDATE teams SET meta = ? WHERE team_id = ?",
+            (json.dumps(meta), team_id)
+        )
     return RedirectResponse("/team-dashboard", status_code=303)
 
 
@@ -791,11 +780,9 @@ def rename_team(
 ):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE teams SET team_name = ? WHERE team_id = ?", (new_name, team_id))
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE teams SET team_name = ? WHERE team_id = ?", (new_name, team_id))
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
 
@@ -819,39 +806,36 @@ def update_scenario(
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    conn = get_connection()
-    cursor = conn.cursor()
     active_session = get_active_session_for_teacher(user["team_id"])
     session_id = active_session[0]
     current_month = active_session[3]
 
     if month < current_month:
-        conn.close()
         return RedirectResponse("/teacher-dashboard", status_code=303)
 
-    cursor.execute(
-        "SELECT scenario_state FROM simulation_sessions WHERE session_id = ?",
-        (session_id,)
-    )
-    result = cursor.fetchone()
-    scenario_state = json.loads(result[0]) if result and result[0] else {}
-    scenario_state[str(month)] = {
-        "name": name,
-        "scrap_rate": {"qc": scrap_qc, "qa": scrap_qa, "tqm": scrap_tqm},
-        "machine_breakdown": machine_breakdown,
-        "employee_strike": employee_strike,
-        "ingredient_multiplier": ingredient_multiplier,
-        "shipping_multiplier": shipping_multiplier,
-        "sales_price_multiplier": sales_price_multiplier,
-        "demand_multiplier": demand_multiplier,
-        "extra_fixed_cost": extra_fixed_cost
-    }
-    cursor.execute(
-        "UPDATE simulation_sessions SET scenario_state = ? WHERE session_id = ?",
-        (json.dumps(scenario_state), session_id)
-    )
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT scenario_state FROM simulation_sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        result = cursor.fetchone()
+        scenario_state = json.loads(result[0]) if result and result[0] else {}
+        scenario_state[str(month)] = {
+            "name": name,
+            "scrap_rate": {"qc": scrap_qc, "qa": scrap_qa, "tqm": scrap_tqm},
+            "machine_breakdown": machine_breakdown,
+            "employee_strike": employee_strike,
+            "ingredient_multiplier": ingredient_multiplier,
+            "shipping_multiplier": shipping_multiplier,
+            "sales_price_multiplier": sales_price_multiplier,
+            "demand_multiplier": demand_multiplier,
+            "extra_fixed_cost": extra_fixed_cost
+        }
+        cursor.execute(
+            "UPDATE simulation_sessions SET scenario_state = ? WHERE session_id = ?",
+            (json.dumps(scenario_state), session_id)
+        )
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
 
@@ -867,27 +851,24 @@ def end_session(user=Depends(get_current_user)):
     session_id = active_session[0]
     current_month = active_session[3]
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT scenario_state FROM simulation_sessions WHERE session_id = ?",
-        (session_id,)
-    )
-    result = cursor.fetchone()
-    scenario_state = json.loads(result[0]) if result and result[0] else {}
-    scenario = scenario_state.get(str(current_month), DEFAULT_SCENARIO)
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT scenario_state FROM simulation_sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        result = cursor.fetchone()
+        scenario_state = json.loads(result[0]) if result and result[0] else {}
+        scenario = scenario_state.get(str(current_month), DEFAULT_SCENARIO)
 
     run_current_month_for_all_teams(session_id, current_month, scenario)
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE simulation_sessions SET status = 'finished', current_month = ?
-        WHERE session_id = ?
-    """, (current_month, session_id))
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE simulation_sessions SET status = 'finished', current_month = ?
+            WHERE session_id = ?
+        """, (current_month, session_id))
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
 
@@ -896,21 +877,18 @@ def delete_session(user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    conn = get_connection()
-    cursor = conn.cursor()
     active_session = get_active_session_for_teacher(user["team_id"])
     if not active_session:
-        conn.close()
         return RedirectResponse("/teacher-dashboard", status_code=303)
 
     session_id = active_session[0]
-    cursor.execute(
-        "DELETE FROM teams WHERE session_id = ? AND role = 'team'",
-        (session_id,)
-    )
-    cursor.execute("DELETE FROM simulation_sessions WHERE session_id = ?", (session_id,))
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM teams WHERE session_id = ? AND role = 'team'",
+            (session_id,)
+        )
+        cursor.execute("DELETE FROM simulation_sessions WHERE session_id = ?", (session_id,))
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
 
@@ -923,14 +901,12 @@ def make_competitive(user=Depends(get_current_user)):
     if not active_session:
         return RedirectResponse("/teacher-dashboard", status_code=303)
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE simulation_sessions SET competitive_mode = 1 WHERE session_id = ?",
-        (active_session[0],)
-    )
-    conn.commit()
-    conn.close()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE simulation_sessions SET competitive_mode = 1 WHERE session_id = ?",
+            (active_session[0],)
+        )
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
 
