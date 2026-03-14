@@ -2,187 +2,275 @@
 
 {% block content %}
 
-<div style="margin-bottom:16px;">
-    <a href="/hub" style="color:#777; font-size:14px; text-decoration:none;">← Simulator Hub</a>
-</div>
+<style>
+.session-panel {
+    display: grid;
+    grid-template-columns: 1.6fr 1.6fr 1fr;
+    gap: 28px;
+    align-items: start;
+}
 
-<h1>👩‍🏫 Biscuit Factory – Teacher Dashboard</h1>
+.session-col-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+    margin-bottom: 6px;
+}
+
+.session-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #1e293b;
+    margin-bottom: 16px;
+}
+
+.join-code-block {
+    background: #f0f4ff;
+    border: 2px solid #2c7be5;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.join-code-value {
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: 6px;
+    color: #2c7be5;
+    margin: 4px 0 8px 0;
+}
+
+.join-code-link {
+    font-size: 13px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.join-code-link a { color: #2c7be5; font-weight: bold; }
+
+.copy-btn {
+    padding: 2px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid #2c7be5;
+    background: white;
+    color: #2c7be5;
+    border-radius: 4px;
+}
+
+#copyConfirm { color: green; font-size: 12px; display: none; }
+
+.stat-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #aaa;
+}
+
+.stat-value {
+    font-size: 15px;
+    font-weight: bold;
+    color: #1e293b;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.badge-setup    { background: #fff3cd; color: #856404; }
+.badge-active   { background: #d4edda; color: #155724; }
+.badge-finished { background: #f0f0f0; color: #555; }
+
+.missing-warning {
+    background: #ffe6e6;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+.missing-warning ul { margin: 6px 0 0 16px; padding: 0; }
+
+.session-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.session-actions .btn,
+.session-actions button {
+    width: 100%;
+    display: block;
+    text-align: center;
+    box-sizing: border-box;
+}
+</style>
 
 <!-- ================================= -->
-<!-- SIMULATION SESSION (UNCHANGED) -->
+<!-- SIMULATION SESSION PANEL -->
 <!-- ================================= -->
 
 <div class="card large-card">
 
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2>Simulation Session</h2>
+{% if active_session %}
 
-        {% if active_session %}
+    <div class="session-panel">
+
+        <!-- LEFT: Session name + join code -->
         <div>
+            <div class="session-col-label">Simulation Session</div>
+            <div class="session-title">{{ active_session[1] }}</div>
+
+            {% if join_code %}
+            <div class="join-code-block">
+                <div class="session-col-label">Class Join Code</div>
+                <div class="join-code-value">{{ join_code }}</div>
+                <div class="join-code-link">
+                    <a id="joinLink" href="/join/{{ join_code }}">simprentice.com/join/{{ join_code }}</a>
+                    <button class="copy-btn" onclick="copyJoinLink()">Copy</button>
+                    <span id="copyConfirm">Copied!</span>
+                </div>
+            </div>
+            <script>
+            function copyJoinLink() {
+                const url = window.location.origin + "/join/{{ join_code }}";
+                navigator.clipboard.writeText(url).then(function() {
+                    document.getElementById("copyConfirm").style.display = "inline";
+                    setTimeout(function(){ document.getElementById("copyConfirm").style.display = "none"; }, 2000);
+                });
+            }
+            </script>
+            {% endif %}
+        </div>
+
+        <!-- MIDDLE: Status & stats -->
+        <div class="stat-row">
+
+            <div class="stat-item">
+                <span class="stat-label">Status</span>
+                <span>
+                    {% if active_session[2] == "setup" %}
+                        <span class="status-badge badge-setup">Setup</span>
+                    {% elif active_session[2] == "active" %}
+                        <span class="status-badge badge-active">Active</span>
+                    {% else %}
+                        <span class="status-badge badge-finished">Finished</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="stat-item">
+                <span class="stat-label">Month</span>
+                <span class="stat-value">{{ active_session[3] }} of {{ active_session[4] }}</span>
+            </div>
+
+            <div class="stat-item">
+                <span class="stat-label">Registered Teams</span>
+                <span class="stat-value">{{ team_count }}</span>
+            </div>
 
             {% if active_session[2] == "active" %}
-
-            <form method="post" action="/end-session" style="display:inline;">
-                <button type="button"
-                        class="btn secondary"
-                        onclick="confirmEndSession()">
-                    🛑 End Session Early
-                </button>
-            </form>
-
-            {% endif %}
-            <form method="post" action="/delete-session" style="display:inline;">
-                <button type="button"
-                        class="btn secondary"
-                        onclick="confirmDeleteSession()">
-                    🗑 Delete Session
-                </button>
-            </form>
-            {% if active_session[2] == "finished" %}
-
-            {% if not competitive_mode %}
-
-            <form method="post"
-                action="/make-competitive"
-                style="display:inline;">
-            <button type="button"
-                    class="btn teacher"
-                    onclick="confirmCompetitive()">
-                🏆 Make This Competitive
-            </button>
-
-            </form>
-
-            {% else %}
-
-            <button class="btn teacher" disabled>
-            🏆 This Is Now Competitive
-            </button>
-
-            {% endif %}
-
-            <form method="post" action="/create-pdfs" style="display:inline;">
-            <button type="submit" class="btn teacher">
-            📄 Create PDFs
-            </button>
-            </form>
-
-            {% endif %}
-        </div>
-        {% endif %}
-    </div>
-
-    {% if missing_teams %}
-        <div style="background-color: #ffe6e6; padding: 10px; margin-bottom: 15px; border-radius: 5px;">
-            <strong>⚠ Cannot advance month.</strong>
-            <ul>
-                {% for team in missing_teams %}
-                    <li>{{ team }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    {% endif %}
-
-    {% if active_session %}
-
-        <p><strong>Name:</strong> {{ active_session[1] }}</p>
-
-        {% if join_code %}
-        <div style="margin:16px 0; padding:14px 18px; background:#f0f4ff; border:2px solid #2c7be5; border-radius:8px; display:inline-block; text-align:left;">
-            <div style="margin-bottom:8px;">
-                <strong>Class Join Code:</strong>
-                <span style="
-                    display:inline-block;
-                    font-size:24px;
-                    letter-spacing:6px;
-                    font-weight:bold;
-                    color:#2c7be5;
-                    margin-left:10px;
-                    vertical-align:middle;
-                ">{{ join_code }}</span>
+            <div class="stat-item">
+                <span class="stat-label">Production Plans Submitted</span>
+                <span class="stat-value">{{ submitted_count }} of {{ total_teams }}</span>
             </div>
-            <div style="font-size:13px; color:#555;">
-                Direct link:
-                <a id="joinLink" href="/join/{{ join_code }}" style="color:#2c7be5; font-weight:bold;">
-                    simprentice.com/join/{{ join_code }}
-                </a>
-                <button onclick="copyJoinLink()" style="margin-left:8px; padding:2px 10px; font-size:12px; cursor:pointer; border:1px solid #2c7be5; background:white; color:#2c7be5; border-radius:4px;">
-                    Copy
-                </button>
-                <span id="copyConfirm" style="color:green; font-size:12px; margin-left:6px; display:none;">Copied!</span>
+            {% endif %}
+
+            {% if missing_teams %}
+            <div class="missing-warning">
+                <strong>⚠ Cannot advance month.</strong>
+                <ul>
+                    {% for team in missing_teams %}<li>{{ team }}</li>{% endfor %}
+                </ul>
             </div>
-            <div style="font-size:12px; color:#888; margin-top:6px;">Share the code or link with your students so they can register.</div>
+            {% endif %}
+
         </div>
 
-        <script>
-        function copyJoinLink() {
-            const url = window.location.origin + "/join/{{ join_code }}";
-            navigator.clipboard.writeText(url).then(function() {
-                document.getElementById("copyConfirm").style.display = "inline";
-                setTimeout(function(){ document.getElementById("copyConfirm").style.display = "none"; }, 2000);
-            });
-        }
-        </script>
-        {% endif %}
+        <!-- RIGHT: Actions -->
+        <div class="session-actions">
 
-        <p>
-        <strong>Current Month:</strong> {{ active_session[3] }}
-
-        {% if active_session[2] == "active" %}
-        <span style="margin-left:10px; font-weight:bold;">
-        (
-        <span style="color:green;">{{ submitted_count }}</span>
-        <span style="color:#888;">of</span>
-        <span style="color:#555;">{{ total_teams }}</span>
-        teams submitted production plans
-        )
-        </span>
-        {% endif %}
-        </p>
-        <p><strong>Total Months:</strong> {{ active_session[4] }}</p>
-        <p><strong>Status:</strong> {{ active_session[2] }}</p>
-        <p><strong>Registered Teams:</strong> {{ team_count }}</p>
-
-        {% if active_session[2] == "setup" %}
-            <form method="post" action="/end-setup-phase" style="margin-top: 15px;">
+            {% if active_session[2] == "setup" %}
+            <form method="post" action="/end-setup-phase">
                 <button type="submit" class="btn">
                     🚀 End Setup Phase & Start Month 1
                 </button>
             </form>
-        {% endif %}
+            {% endif %}
 
-        {% if active_session[2] == "active" %}
+            {% if active_session[2] == "active" %}
             <form method="post"
-                action="/advance-month"
-                style="margin-top:15px;"
-                id="advanceForm"
-                data-missing='{{ popup_missing_teams | tojson }}'
-                data-month="{{ current_month }}">
-
+                  action="/advance-month"
+                  id="advanceForm"
+                  data-missing='{{ popup_missing_teams | tojson }}'
+                  data-month="{{ current_month }}">
                 {% if current_month < total_months %}
-                    <button type="button" class="btn teacher" onclick="confirmAdvance()">
-                        ➡ Advance Month
-                    </button>
+                    <button type="button" class="btn teacher" onclick="confirmAdvance()">➡ Advance Month</button>
                 {% else %}
-                    <button type="button" class="btn teacher" onclick="confirmAdvance()">
-                        ➡ Advance Month & End Session
-                    </button>
+                    <button type="button" class="btn teacher" onclick="confirmAdvance()">➡ Advance Month & End Session</button>
                 {% endif %}
-
             </form>
-        {% endif %}
 
-    {% else %}
+            <form method="post" action="/end-session">
+                <button type="button" class="btn secondary" onclick="confirmEndSession()">🛑 End Session Early</button>
+            </form>
+            {% endif %}
 
-        <h3>Create New Session</h3>
+            {% if active_session[2] == "finished" %}
+            {% if not competitive_mode %}
+            <form method="post" action="/make-competitive">
+                <button type="button" class="btn teacher" onclick="confirmCompetitive()">🏆 Make This Competitive</button>
+            </form>
+            {% else %}
+            <button class="btn teacher" disabled>🏆 This Is Now Competitive</button>
+            {% endif %}
 
-        <form method="post" action="/create-session">
-            <input type="text" name="session_name" placeholder="Session name" required>
-            <input type="number" name="total_months" placeholder="Total months" min="1" required>
-            <button type="submit">Start Session</button>
-        </form>
+            <form method="post" action="/create-pdfs">
+                <button type="submit" class="btn teacher">📄 Create PDFs</button>
+            </form>
+            {% endif %}
 
-    {% endif %}
+            <form method="post" action="/delete-session">
+                <button type="button" class="btn secondary" onclick="confirmDeleteSession()">🗑 Delete Session</button>
+            </form>
+
+        </div>
+
+    </div>
+
+{% else %}
+
+    <h3>Create New Session</h3>
+
+    <form method="post" action="/create-session">
+        <input type="text" name="session_name" placeholder="Session name" required>
+        <input type="number" name="total_months" placeholder="Total months" min="1" required>
+        <button type="submit">Start Session</button>
+    </form>
+
+{% endif %}
+
 </div>
 
 
