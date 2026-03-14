@@ -476,7 +476,7 @@ def get_all_sessions_for_teacher(teacher_id):
             SELECT session_id, session_name, status, current_month, total_months, join_code
             FROM simulation_sessions
             WHERE teacher_id = ?
-            ORDER BY created_at DESC
+            ORDER BY created_at ASC
         """, (teacher_id,))
         return cursor.fetchall()
 
