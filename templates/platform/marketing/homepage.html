@@ -13,8 +13,51 @@
             text-align: center;
         }
 
+        /* ---- Top nav ---- */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 28px;
+            background: white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .top-nav .brand {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c7be5;
+            text-decoration: none;
+        }
+
+        .top-nav .user-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: #444;
+        }
+
+        .top-nav .user-area a {
+            color: #2c7be5;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .top-nav .user-area a:hover { text-decoration: underline; }
+
+        .user-badge {
+            background: #eef4ff;
+            color: #2c7be5;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* ---- Hero ---- */
         .hero {
-            margin-top: 100px;
+            margin-top: 80px;
             padding: 0 20px;
         }
 
@@ -29,6 +72,7 @@
             margin-bottom: 48px;
         }
 
+        /* ---- Cards ---- */
         .audience-cards {
             display: flex;
             justify-content: center;
@@ -97,6 +141,21 @@
 </head>
 
 <body>
+
+<!-- Top nav -->
+<nav class="top-nav">
+    <a class="brand" href="/">Simprentice</a>
+    <div class="user-area">
+        {% if user and user.role == "teacher" %}
+            <span class="user-badge">{{ user.team_name }}</span>
+            <a href="/logout">Sign out</a>
+        {% else %}
+            <a href="/teacher-login">Sign in</a>
+        {% endif %}
+    </div>
+</nav>
+
+<!-- Hero -->
 <div class="hero">
 
     <h1>Simprentice</h1>
@@ -106,9 +165,14 @@
 
         <div class="audience-card">
             <h2>👩‍🏫 I'm a teacher</h2>
-            <p>Set up and run simulations for your class</p>
-            <a class="btn btn-primary" href="/teacher-register">Register</a>
-            <a class="btn btn-secondary" href="/teacher-login">Sign in</a>
+            {% if user and user.role == "teacher" %}
+                <p>Welcome back, {{ user.team_name.split()[0] }}!</p>
+                <a class="btn btn-primary" href="/hub">Enter Simulator Hub</a>
+            {% else %}
+                <p>Set up and run simulations for your class</p>
+                <a class="btn btn-primary" href="/teacher-register">Register</a>
+                <a class="btn btn-secondary" href="/teacher-login">Sign in</a>
+            {% endif %}
         </div>
 
         <div class="audience-card">

@@ -28,7 +28,8 @@ def homepage(request: Request):
     host = request.headers.get("host", "")
     if host.startswith("sim."):
         return RedirectResponse(url="https://simprentice.com/app")
-    return templates.TemplateResponse("platform/marketing/homepage.html", {"request": request})
+    user = get_current_user(request)
+    return templates.TemplateResponse("platform/marketing/homepage.html", {"request": request, "user": user})
 
 
 # ============================================================
