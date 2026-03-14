@@ -221,7 +221,7 @@ def teacher_register(
         )
 
     token = create_access_token({"team_id": teacher_id, "team_name": name, "role": "teacher"})
-    response = RedirectResponse("/teacher-dashboard", status_code=303)
+    response = RedirectResponse("/hub", status_code=303)
     response.set_cookie("access_token", token, httponly=True)
     return response
 
@@ -261,10 +261,58 @@ def team_login(
 # ============================================================
 
 @app.get("/register", response_class=HTMLResponse)
-def register_page(request: Request):
+def register_page(request: Request, code: str = None):
     return templates.TemplateResponse(
         "register.html",
-        {"request": request}
+        {"request": request, "prefilled_code": code.upper() if code else None}
+    )
+
+
+# ============================================================
+# STUDENT ENTRY
+# ============================================================
+
+@app.get("/student", response_class=HTMLResponse)
+def student_entry_page(request: Request):
+    return templates.TemplateResponse("student_entry.html", {"request": request})
+
+
+@app.post("/student")
+def student_entry_submit(join_code: str = Form(...)):
+    return RedirectResponse(f"/join/{join_code.strip().upper()}", status_code=303)
+
+
+@app.get("/join/{code}", response_class=HTMLResponse)
+def session_landing(request: Request, code: str):
+    code = code.upper()
+    session = get_session_by_join_code(code)
+
+    if not session:
+        return templates.TemplateResponse(
+            "student_entry.html",
+            {"request": request, "error": "That code wasn't recognised. Check with your teacher."}
+        )
+
+    # Get teacher first name only
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT team_name FROM teams WHERE team_id = ?", (session[6],))
+    teacher_row = cursor.fetchone()
+    conn.close()
+
+    teacher_first_name = ""
+    if teacher_row and teacher_row[0]:
+        teacher_first_name = teacher_row[0].split()[0]
+
+    return templates.TemplateResponse(
+        "session_landing.html",
+        {
+            "request": request,
+            "session_name": session[1],
+            "session_status": session[2],
+            "teacher_first_name": teacher_first_name,
+            "join_code": code,
+        }
     )
 
 
@@ -356,9 +404,44 @@ def dashboard(user=Depends(get_current_user)):
         return RedirectResponse("/app", status_code=303)
 
     if user["role"] == "teacher":
-        return RedirectResponse("/teacher-dashboard", status_code=303)
+        return RedirectResponse("/hub", status_code=303)
 
     return RedirectResponse("/team-dashboard", status_code=303)
+
+
+# ============================================================
+# SIMULATOR HUB
+# ============================================================
+
+@app.get("/hub", response_class=HTMLResponse)
+def simulator_hub(request: Request, user=Depends(get_current_user)):
+
+    if not user or user["role"] != "teacher":
+        return RedirectResponse("/teacher-login", status_code=303)
+
+    # Get biscuit factory session info for the tile
+    active_session = get_active_session_for_teacher(user["team_id"])
+
+    # Count all sessions for this teacher
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) FROM simulation_sessions WHERE teacher_id = ?",
+        (user["team_id"],)
+    )
+    total_sessions = cursor.fetchone()[0]
+    conn.close()
+
+    return templates.TemplateResponse(
+        "simulator_hub.html",
+        {
+            "request": request,
+            "user": user,
+            "biscuit_session": active_session,
+            "total_sessions": total_sessions,
+        }
+    )
+
 
 # ============================================================
 # TEACHER DASHBOARD

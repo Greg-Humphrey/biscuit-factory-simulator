@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Join a class – Simprentice</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="card" style="max-width:420px; margin:80px auto; text-align:center;">
+
+        <h1 style="margin-bottom:4px;">Simprentice</h1>
+        <h2 style="margin-top:0; color:#555; font-weight:normal;">Join your class</h2>
+
+        {% if error %}
+            <div class="error" style="margin-bottom:16px;">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/student" style="margin-top:24px;">
+            <label style="display:block; margin-bottom:8px; font-weight:bold;">Enter your class code</label>
+            <input
+                type="text"
+                name="join_code"
+                required
+                maxlength="6"
+                placeholder="e.g. ABC123"
+                autofocus
+                style="text-transform:uppercase; letter-spacing:6px; font-size:28px; text-align:center; width:100%; padding:12px; border:2px solid #ccc; border-radius:6px;"
+            >
+            <p style="color:#888; font-size:13px; margin-top:8px;">Your teacher will give you this 6-letter code.</p>
+            <button type="submit" class="btn" style="margin-top:8px; width:100%;">Continue</button>
+        </form>
+
+        <div style="margin-top:28px; color:#aaa; font-size:13px;">
+            — or paste a direct link your teacher shared —
+        </div>
+
+        <div style="margin-top:24px; border-top:1px solid #eee; padding-top:20px;">
+            <a href="/" style="color:#888; font-size:13px;">Back to homepage</a>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

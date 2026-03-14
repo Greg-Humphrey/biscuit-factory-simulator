@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Simulator Hub – Simprentice</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .hub-header {
+            padding: 32px 0 16px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 32px;
+        }
+
+        .hub-header h1 {
+            margin: 0 0 4px 0;
+            font-size: 28px;
+        }
+
+        .hub-header p {
+            margin: 0;
+            color: #777;
+            font-size: 15px;
+        }
+
+        .simulator-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .sim-tile {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            padding: 28px;
+            width: 300px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .sim-tile h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .sim-tile .subject {
+            font-size: 13px;
+            color: #888;
+            margin: 0;
+        }
+
+        .sim-tile .divider {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 4px 0;
+        }
+
+        .session-status {
+            font-size: 13px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+
+        .badge-setup    { background: #fff3cd; color: #856404; }
+        .badge-active   { background: #d4edda; color: #155724; }
+        .badge-finished { background: #f0f0f0; color: #555; }
+
+        .sim-tile .btn {
+            display: block;
+            text-align: center;
+            padding: 11px;
+            font-size: 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .btn-open {
+            background: #2c7be5;
+            color: white;
+        }
+
+        .btn-open:hover { background: #1a5fd0; }
+
+        .btn-new {
+            background: white;
+            color: #2c7be5;
+            border: 2px solid #2c7be5;
+        }
+
+        .btn-new:hover { background: #eef4ff; }
+
+        .coming-soon {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .coming-soon-label {
+            font-size: 12px;
+            color: #aaa;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 0;
+        }
+
+        .nav-bar a {
+            color: #555;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-bar a:hover { color: #2c7be5; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Top nav -->
+    <div class="nav-bar">
+        <strong style="font-size:18px; color:#333;">Simprentice</strong>
+        <div style="display:flex; gap:20px; align-items:center;">
+            <span style="color:#777; font-size:14px;">{{ user.team_name }}</span>
+            <a href="/logout">Sign out</a>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="hub-header">
+        <h1>Simulator Hub</h1>
+        <p>Choose a simulator to manage your sessions</p>
+    </div>
+
+    <!-- Simulator tiles -->
+    <div class="simulator-grid">
+
+        <!-- Biscuit Factory Simulator tile -->
+        <div class="sim-tile">
+            <div>
+                <h2>🏭 Biscuit Factory</h2>
+                <p class="subject">A-Level Business &amp; Economics</p>
+            </div>
+
+            <hr class="divider">
+
+            <div class="session-status">
+                {% if biscuit_session %}
+                    {% if biscuit_session[2] == "setup" %}
+                        <span>Current session:</span>
+                        <span class="status-badge badge-setup">Setup</span>
+                        <div style="margin-top:6px; color:#555;">{{ biscuit_session[1] }}</div>
+                    {% elif biscuit_session[2] == "active" %}
+                        <span>Current session:</span>
+                        <span class="status-badge badge-active">Active</span>
+                        <div style="margin-top:6px; color:#555;">
+                            {{ biscuit_session[1] }}
+                            — Month {{ biscuit_session[3] }} of {{ biscuit_session[4] }}
+                        </div>
+                    {% elif biscuit_session[2] == "finished" %}
+                        <span>Last session:</span>
+                        <span class="status-badge badge-finished">Finished</span>
+                        <div style="margin-top:6px; color:#888;">{{ biscuit_session[1] }}</div>
+                    {% endif %}
+                    {% if total_sessions > 1 %}
+                        <div style="margin-top:4px; color:#aaa; font-size:12px;">{{ total_sessions }} total sessions</div>
+                    {% endif %}
+                {% else %}
+                    <span style="color:#aaa;">No sessions yet</span>
+                {% endif %}
+            </div>
+
+            <hr class="divider">
+
+            {% if biscuit_session and biscuit_session[2] in ["setup", "active"] %}
+                <a href="/teacher-dashboard" class="btn btn-open">Open session</a>
+                <a href="/teacher-dashboard#create-session" class="btn btn-new">New session</a>
+            {% else %}
+                <a href="/teacher-dashboard" class="btn btn-open">
+                    {% if biscuit_session %}View sessions{% else %}Get started{% endif %}
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Placeholder: future simulators -->
+        <div class="sim-tile coming-soon">
+            <div>
+                <h2>📦 Supply Chain</h2>
+                <p class="subject">A-Level Business</p>
+            </div>
+            <hr class="divider">
+            <div class="session-status" style="color:#aaa;">Coming soon</div>
+        </div>
+
+    </div>
+
+</div>
+</body>
+</html>

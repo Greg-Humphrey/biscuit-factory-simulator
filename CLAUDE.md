@@ -54,6 +54,22 @@ Simprentice is planned to become a multi-product SaaS platform:
 - This is a future project — do not pre-build it, but avoid architectural decisions
   that would make it harder to introduce later
 
+## Page & Route Terminology
+
+| Screen | URL | Who sees it |
+|---|---|---|
+| Marketing homepage | `/` | Everyone (unauthenticated) |
+| Student entry | `/student` | Students entering a class code |
+| Session landing | `/join/<code>` | Students after entering code |
+| Simulator Hub | `/hub` | Teachers after login — shows simulator tiles |
+| Teacher Dashboard | `/teacher-dashboard` | Teachers inside a Biscuit Factory session |
+| Team Dashboard | `/team-dashboard` | Students inside a session |
+
+- **Simulator Hub** — platform-level landing for teachers. Shows one tile per available simulator. Currently only Biscuit Factory. Future sims add more tiles here.
+- **Teacher Dashboard** — simulator-specific classroom view. Manages teams, advances months, edits scenarios. Belongs to the Biscuit Factory simulator only.
+- **Session** — one run of a simulator with a class. Has a name, join code, month count, and status (setup / active / finished).
+- Teacher login → `/hub`. All within-simulator redirects stay on `/teacher-dashboard`.
+
 ## Licensing & School Admin (Current Approach)
 - Licences are stored in the database (school and teacher level)
 - Greg manually manages school/teacher accounts in the near term — no self-service admin UI needed yet

@@ -1,16 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Team Registration</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-
 <div class="container">
-
     <div class="card">
         <h1>🏭 Biscuit Factory Simulator</h1>
         <h2>Team Registration</h2>
@@ -22,9 +13,19 @@
         <form method="post" action="/register">
 
             <label>Class Join Code</label>
-            <input type="text" name="join_code" required placeholder="e.g. ABC123" maxlength="6"
-                   style="text-transform:uppercase; letter-spacing:4px; font-size:20px; text-align:center;">
-            <p style="color:#888; font-size:13px; margin-top:4px;">Your teacher will give you this code.</p>
+            <input
+                type="text"
+                name="join_code"
+                required
+                maxlength="6"
+                placeholder="e.g. ABC123"
+                value="{{ prefilled_code or '' }}"
+                {% if prefilled_code %}readonly{% endif %}
+                style="text-transform:uppercase; letter-spacing:4px; font-size:20px; text-align:center;"
+            >
+            {% if not prefilled_code %}
+                <p style="color:#888; font-size:13px; margin-top:4px;">Your teacher will give you this code.</p>
+            {% endif %}
 
             <label>Team Name</label>
             <input type="text" name="team_name" required>
@@ -40,10 +41,5 @@
         </div>
 
     </div>
-
 </div>
-
-</body>
-</html>
-
 {% endblock %}
