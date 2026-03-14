@@ -7,11 +7,14 @@
 </head>
 <body>
 
-<div class="container">
-    <div class="card" style="max-width:420px; margin:80px auto; text-align:center;">
+<nav class="platform-nav">
+    <a class="brand" href="/">Simprentice</a>
+</nav>
 
-        <h1 style="margin-bottom:4px;">Simprentice</h1>
-        <h2 style="margin-top:0; color:#555; font-weight:normal;">Join your class</h2>
+<div class="container">
+    <div class="card" style="max-width:420px; margin:60px auto; text-align:center;">
+
+        <h2 style="margin-top:0; margin-bottom:4px;">Join your class</h2>
 
         {% if error %}
             <div class="error" style="margin-bottom:16px;">{{ error }}</div>
@@ -34,10 +37,6 @@
 
         <div style="margin-top:28px; color:#aaa; font-size:13px;">
             — or paste a direct link your teacher shared —
-        </div>
-
-        <div style="margin-top:24px; border-top:1px solid #eee; padding-top:20px;">
-            <a href="/" style="color:#888; font-size:13px;">Back to homepage</a>
         </div>
 
     </div>
