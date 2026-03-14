@@ -21,6 +21,11 @@
 
         <form method="post" action="/register">
 
+            <label>Class Join Code</label>
+            <input type="text" name="join_code" required placeholder="e.g. ABC123" maxlength="6"
+                   style="text-transform:uppercase; letter-spacing:4px; font-size:20px; text-align:center;">
+            <p style="color:#888; font-size:13px; margin-top:4px;">Your teacher will give you this code.</p>
+
             <label>Team Name</label>
             <input type="text" name="team_name" required>
 
@@ -31,7 +36,7 @@
         </form>
 
         <div class="link">
-            <a href="/login">Already registered? Login here</a>
+            <a href="/team-login">Already registered? Login here</a>
         </div>
 
     </div>

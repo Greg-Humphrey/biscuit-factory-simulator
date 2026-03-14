@@ -1,66 +1,113 @@
 <!DOCTYPE html>
 <html>
 <head>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Simprentice</title>
-
     <style>
+        * { box-sizing: border-box; }
 
-        body{
+        body {
             font-family: Arial, sans-serif;
-            background:#f5f7fa;
-            margin:0;
-            text-align:center;
+            background: #f5f7fa;
+            margin: 0;
+            text-align: center;
         }
 
-        .hero{
-            margin-top:120px;
+        .hero {
+            margin-top: 100px;
+            padding: 0 20px;
         }
 
-        h1{
-            font-size:48px;
-            margin-bottom:10px;
+        h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
         }
 
-        p{
-            font-size:20px;
-            color:#555;
+        .tagline {
+            font-size: 20px;
+            color: #555;
+            margin-bottom: 48px;
         }
 
-        .btn{
-            display:inline-block;
-            margin-top:40px;
-            padding:16px 30px;
-            font-size:18px;
-            background:#2c7be5;
-            color:white;
-            text-decoration:none;
-            border-radius:6px;
+        .cta-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
         }
 
-        .btn:hover{
-            background:#1a5fd0;
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
+        .btn {
+            display: inline-block;
+            padding: 14px 28px;
+            font-size: 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: #2c7be5;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1a5fd0;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #2c7be5;
+            border: 2px solid #2c7be5;
+        }
+
+        .btn-secondary:hover {
+            background: #eef4ff;
+        }
+
+        .divider {
+            margin: 40px auto;
+            width: 60px;
+            border: none;
+            border-top: 2px solid #ddd;
+        }
+
+        .student-section {
+            color: #777;
+            font-size: 15px;
+        }
+
+        .student-section a {
+            color: #2c7be5;
+        }
     </style>
-
 </head>
 
 <body>
-
 <div class="hero">
 
-<h1>Simprentice</h1>
+    <h1>Simprentice</h1>
+    <p class="tagline">Learn business by running real simulations</p>
 
-<p>
-Learn business by running real simulations
-</p>
+    <div class="cta-group">
+        <div class="btn-row">
+            <a class="btn btn-primary" href="/teacher-register">Register as a teacher</a>
+            <a class="btn btn-secondary" href="/teacher-login">Teacher sign in</a>
+        </div>
+    </div>
 
-<a class="btn" href="/app">
-Launch Biscuit Factory Simulator
-</a>
+    <hr class="divider">
+
+    <div class="student-section">
+        <p>Student? <a href="/app">Enter your class simulator here</a></p>
+    </div>
 
 </div>
-
 </body>
 </html>

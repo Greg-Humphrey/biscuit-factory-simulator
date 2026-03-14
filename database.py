@@ -12,6 +12,19 @@ def init_db():
     cursor = conn.cursor()
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS schools (
+        school_id TEXT PRIMARY KEY,
+        school_name TEXT NOT NULL,
+        contact_email TEXT,
+        licence_type TEXT DEFAULT 'trial',
+        licence_expiry TEXT,
+        max_sessions INTEGER DEFAULT 3,
+        notes TEXT,
+        created_at TEXT
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS teams (
         team_id TEXT PRIMARY KEY,
         team_name TEXT,
@@ -20,7 +33,8 @@ def init_db():
         simulation TEXT,
         meta TEXT,
         current_month INTEGER,
-        session_id TEXT
+        session_id TEXT,
+        school_id TEXT REFERENCES schools(school_id)
     )
     """)
     cursor.execute("""
@@ -35,6 +49,22 @@ def init_db():
         created_at TEXT
     )
     """)
+    # Migrate: add columns to teams if they don't exist yet
+    cursor.execute("PRAGMA table_info(teams)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "school_id" not in columns:
+        cursor.execute("ALTER TABLE teams ADD COLUMN school_id TEXT REFERENCES schools(school_id)")
+    if "email" not in columns:
+        cursor.execute("ALTER TABLE teams ADD COLUMN email TEXT")
+
+    # Migrate: add columns to simulation_sessions if they don't exist yet
+    cursor.execute("PRAGMA table_info(simulation_sessions)")
+    session_columns = [row[1] for row in cursor.fetchall()]
+    if "teacher_id" not in session_columns:
+        cursor.execute("ALTER TABLE simulation_sessions ADD COLUMN teacher_id TEXT")
+    if "join_code" not in session_columns:
+        cursor.execute("ALTER TABLE simulation_sessions ADD COLUMN join_code TEXT")
+
     # Ensure teacher account exists
     cursor.execute("SELECT * FROM teams WHERE team_name = ?", ("teacher",))
     teacher = cursor.fetchone()
@@ -207,36 +237,39 @@ def get_active_session():
     conn.close()
     return session
 
-def create_new_session(session_name, total_months):
+def _generate_join_code():
+    import random, string
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-    import json
-    from datetime import datetime
-    import uuid
+
+def create_new_session(session_name, total_months, teacher_id=None):
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    # --------------------------------------------------
-    # Deactivate any existing active session
-    # --------------------------------------------------
-    cursor.execute("""
-        UPDATE simulation_sessions
-        SET status = 'finished'
-        WHERE status != 'finished'
-    """)
+    # Deactivate any existing active session for this teacher
+    if teacher_id:
+        cursor.execute("""
+            UPDATE simulation_sessions
+            SET status = 'finished'
+            WHERE teacher_id = ? AND status != 'finished'
+        """, (teacher_id,))
+    else:
+        cursor.execute("""
+            UPDATE simulation_sessions
+            SET status = 'finished'
+            WHERE status != 'finished'
+        """)
 
     session_id = str(uuid.uuid4())
 
-    # --------------------------------------------------
-    # NEW BEHAVIOUR:
-    # Start with EMPTY scenario_state
-    # DEFAULT_SCENARIO will be used lazily at runtime
-    # --------------------------------------------------
-    scenario_state = {}
+    # Generate a unique 6-character join code
+    join_code = _generate_join_code()
+    cursor.execute("SELECT session_id FROM simulation_sessions WHERE join_code = ?", (join_code,))
+    while cursor.fetchone():
+        join_code = _generate_join_code()
+        cursor.execute("SELECT session_id FROM simulation_sessions WHERE join_code = ?", (join_code,))
 
-    # --------------------------------------------------
-    # Insert new session
-    # --------------------------------------------------
     cursor.execute("""
         INSERT INTO simulation_sessions (
             session_id,
@@ -245,21 +278,26 @@ def create_new_session(session_name, total_months):
             current_month,
             total_months,
             scenario_state,
-            created_at
+            created_at,
+            teacher_id,
+            join_code
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         session_id,
         session_name,
         "setup",
         0,
         total_months,
-        json.dumps(scenario_state),  # 🔥 empty dict
-        datetime.utcnow().isoformat()
+        json.dumps({}),
+        datetime.utcnow().isoformat(),
+        teacher_id,
+        join_code
     ))
 
     conn.commit()
     conn.close()
+    return join_code
 
 def increment_session_month():
     conn = get_connection()
@@ -381,3 +419,148 @@ def build_team_financials(session_id):
     conn.close()
 
     return team_financials
+
+
+# ---------------------------------------------------------
+# TEACHER ACCOUNTS
+# ---------------------------------------------------------
+
+def register_teacher(name, email, school_name, password):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT team_id FROM teams WHERE email = ? AND role = 'teacher'", (email,))
+    if cursor.fetchone():
+        conn.close()
+        return None, "An account with that email already exists."
+
+    school_id = str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO schools (school_id, school_name, licence_type, max_sessions, created_at)
+        VALUES (?, ?, 'trial', 3, ?)
+    """, (school_id, school_name, datetime.utcnow().isoformat()))
+
+    teacher_id = str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO teams (team_id, team_name, email, password, role, simulation, meta, current_month, school_id)
+        VALUES (?, ?, ?, ?, 'teacher', ?, ?, 0, ?)
+    """, (teacher_id, name, email, password, json.dumps({}), json.dumps({}), school_id))
+
+    conn.commit()
+    conn.close()
+    return teacher_id, None
+
+
+def authenticate_teacher_by_email(email, password):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT team_id, team_name FROM teams WHERE email = ? AND password = ? AND role = 'teacher'",
+        (email, password)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"team_id": row[0], "team_name": row[1], "role": "teacher"}
+    return None
+
+
+def get_active_session_for_teacher(teacher_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT session_id, session_name, status, current_month, total_months, join_code
+        FROM simulation_sessions
+        WHERE teacher_id = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (teacher_id,))
+    session = cursor.fetchone()
+    conn.close()
+    return session
+
+
+def get_session_by_join_code(join_code):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT session_id, session_name, status, current_month, total_months, join_code, teacher_id
+        FROM simulation_sessions
+        WHERE join_code = ?
+    """, (join_code.upper(),))
+    session = cursor.fetchone()
+    conn.close()
+    return session
+
+
+def get_session_for_team(team_id):
+    """Get the session a team belongs to, via their stored session_id."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT s.session_id, s.session_name, s.status, s.current_month, s.total_months, s.join_code
+        FROM teams t
+        JOIN simulation_sessions s ON t.session_id = s.session_id
+        WHERE t.team_id = ?
+    """, (team_id,))
+    session = cursor.fetchone()
+    conn.close()
+    return session
+
+
+# ---------------------------------------------------------
+# SCHOOLS / LICENSING
+# ---------------------------------------------------------
+
+def create_school(school_name, contact_email=None, licence_type="trial", licence_expiry=None, max_sessions=3, notes=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    school_id = str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO schools (school_id, school_name, contact_email, licence_type, licence_expiry, max_sessions, notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (school_id, school_name, contact_email, licence_type, licence_expiry, max_sessions, notes, datetime.utcnow().isoformat()))
+    conn.commit()
+    conn.close()
+    return school_id
+
+
+def get_all_schools():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT school_id, school_name, contact_email, licence_type, licence_expiry, max_sessions, notes, created_at
+        FROM schools
+        ORDER BY school_name
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        {
+            "school_id": r[0], "school_name": r[1], "contact_email": r[2],
+            "licence_type": r[3], "licence_expiry": r[4], "max_sessions": r[5],
+            "notes": r[6], "created_at": r[7]
+        }
+        for r in rows
+    ]
+
+
+def update_school(school_id, **kwargs):
+    allowed = {"school_name", "contact_email", "licence_type", "licence_expiry", "max_sessions", "notes"}
+    fields = {k: v for k, v in kwargs.items() if k in allowed}
+    if not fields:
+        return
+    conn = get_connection()
+    cursor = conn.cursor()
+    set_clause = ", ".join(f"{k} = ?" for k in fields)
+    cursor.execute(f"UPDATE schools SET {set_clause} WHERE school_id = ?", (*fields.values(), school_id))
+    conn.commit()
+    conn.close()
+
+
+def assign_teacher_to_school(teacher_id, school_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE teams SET school_id = ? WHERE team_id = ? AND role = 'teacher'", (school_id, teacher_id))
+    conn.commit()
+    conn.close()

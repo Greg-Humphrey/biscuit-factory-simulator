@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card" style="max-width:480px; margin:60px auto;">
+
+    <h1 style="margin-bottom:4px;">Simprentice</h1>
+    <h2 style="margin-top:0; color:#555; font-weight:normal;">Create a teacher account</h2>
+
+    {% if error %}
+        <div class="error" style="margin-bottom:16px;">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/teacher-register" style="display:flex; flex-direction:column; gap:14px;">
+
+        <div>
+            <label>Full name</label>
+            <input type="text" name="name" required placeholder="e.g. Jane Smith">
+        </div>
+
+        <div>
+            <label>School name</label>
+            <input type="text" name="school_name" required placeholder="e.g. Westfield Academy">
+        </div>
+
+        <div>
+            <label>Work email</label>
+            <input type="email" name="email" required placeholder="j.smith@school.ac.uk">
+        </div>
+
+        <div>
+            <label>Password <span style="color:#999; font-size:13px;">(minimum 8 characters)</span></label>
+            <input type="password" name="password" required minlength="8">
+        </div>
+
+        <div>
+            <label>Confirm password</label>
+            <input type="password" name="confirm_password" required minlength="8">
+        </div>
+
+        <button type="submit" class="btn teacher" style="margin-top:8px;">Create account</button>
+
+    </form>
+
+    <div class="link" style="margin-top:20px; text-align:center;">
+        Already have an account? <a href="/teacher-login">Sign in</a>
+    </div>
+
+</div>
+{% endblock %}

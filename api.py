@@ -19,7 +19,15 @@ from database import (
     delete_team,
     build_team_financials
 )
-from database import get_active_session, create_new_session
+from database import (
+    get_active_session,
+    create_new_session,
+    register_teacher,
+    authenticate_teacher_by_email,
+    get_active_session_for_teacher,
+    get_session_by_join_code,
+    get_session_for_team,
+)
 from decision_engine import create_simulation_from_initial_decisions
 import json
 import simulation_engine as sim
@@ -33,44 +41,8 @@ from fastapi.responses import FileResponse
 app = FastAPI()
 init_db()
 
-def ensure_teacher_exists():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM teams WHERE role = 'teacher'")
-    teacher = cursor.fetchone()
-
-    if not teacher:
-        cursor.execute("""
-            INSERT INTO teams (
-                team_id,
-                team_name,
-                password,
-                role,
-                simulation,
-                meta,
-                current_month,
-                session_id
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            str(uuid.uuid4()),
-            "teacher",
-            "teacher123",
-            "teacher",
-            json.dumps({}),
-            json.dumps({}),
-            0,
-            None
-        ))
-        conn.commit()
-
-    conn.close()
-
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-ensure_teacher_exists()
 
 manager = SimulationManager()
 
@@ -125,6 +97,7 @@ def get_current_user(request: Request):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return {
             "team_id": payload.get("team_id"),
+            "team_name": payload.get("team_name"),
             "role": payload.get("role")
         }
     except JWTError:
@@ -132,33 +105,11 @@ def get_current_user(request: Request):
 
 
 def authenticate_user(team_name: str, password: str):
-
+    """Authenticate student teams by team_name + password."""
     conn = get_connection()
     cursor = conn.cursor()
-
-    # ---------------------------------
-    # TEACHER LOGIN
-    # ---------------------------------
-    if team_name == "teacher":
-        cursor.execute(
-            "SELECT team_id, password FROM teams WHERE role = 'teacher'"
-        )
-        teacher = cursor.fetchone()
-        conn.close()
-
-        if teacher and teacher[1] == password:
-            return {
-                "team_id": teacher[0],
-                "team_name": "teacher",
-                "role": "teacher"
-            }
-        return None
-
-    # ---------------------------------
-    # TEAM LOGIN
-    # ---------------------------------
     cursor.execute(
-        "SELECT team_id, team_name, password, role FROM teams WHERE team_name = ?",
+        "SELECT team_id, team_name, password, role FROM teams WHERE team_name = ? AND role = 'team'",
         (team_name,)
     )
     user = cursor.fetchone()
@@ -170,7 +121,6 @@ def authenticate_user(team_name: str, password: str):
             "team_name": user[1],
             "role": user[3]
         }
-
     return None
 
 
@@ -196,12 +146,10 @@ def create_session(
     total_months: int = Form(...),
     user=Depends(get_current_user)
 ):
-    from database import create_new_session
-
     if not user or user["role"] != "teacher":
         return RedirectResponse("/app", status_code=303)
 
-    create_new_session(session_name, total_months)
+    create_new_session(session_name, total_months, teacher_id=user["team_id"])
 
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
@@ -220,22 +168,60 @@ def teacher_login_page(request: Request):
 @app.post("/teacher-login")
 def teacher_login(
     request: Request,
-    team_name: str = Form(...),
+    email: str = Form(...),
     password: str = Form(...)
 ):
-    user = authenticate_user(team_name, password)
+    user = authenticate_teacher_by_email(email, password)
 
-    if not user or user["role"] != "teacher":
+    if not user:
         return templates.TemplateResponse(
             "teacher_login.html",
-            {"request": request, "error": "Wrong teacher credentials"}
+            {"request": request, "error": "Email or password not recognised."}
         )
 
     token = create_access_token(
-        {"team_id": user["team_id"], "role": user["role"]}
+        {"team_id": user["team_id"], "team_name": user["team_name"], "role": user["role"]}
     )
 
     response = RedirectResponse("/dashboard", status_code=303)
+    response.set_cookie("access_token", token, httponly=True)
+    return response
+
+
+@app.get("/teacher-register", response_class=HTMLResponse)
+def teacher_register_page(request: Request):
+    return templates.TemplateResponse("teacher_register.html", {"request": request})
+
+
+@app.post("/teacher-register")
+def teacher_register(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(...),
+    school_name: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...)
+):
+    if password != confirm_password:
+        return templates.TemplateResponse(
+            "teacher_register.html",
+            {"request": request, "error": "Passwords do not match."}
+        )
+    if len(password) < 8:
+        return templates.TemplateResponse(
+            "teacher_register.html",
+            {"request": request, "error": "Password must be at least 8 characters."}
+        )
+
+    teacher_id, error = register_teacher(name, email, school_name, password)
+    if error:
+        return templates.TemplateResponse(
+            "teacher_register.html",
+            {"request": request, "error": error}
+        )
+
+    token = create_access_token({"team_id": teacher_id, "team_name": name, "role": "teacher"})
+    response = RedirectResponse("/teacher-dashboard", status_code=303)
     response.set_cookie("access_token", token, httponly=True)
     return response
 
@@ -263,7 +249,7 @@ def team_login(
         )
 
     token = create_access_token(
-        {"team_id": user["team_id"], "role": user["role"]}
+        {"team_id": user["team_id"], "team_name": user["team_name"], "role": user["role"]}
     )
 
     response = RedirectResponse("/dashboard", status_code=303)
@@ -286,31 +272,25 @@ def register_page(request: Request):
 def register_team(
     request: Request,
     team_name: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...),
+    join_code: str = Form(...)
 ):
-    from database import get_active_session
     import uuid
     import json
 
-    active_session = get_active_session()
+    active_session = get_session_by_join_code(join_code)
 
     if not active_session:
         return templates.TemplateResponse(
             "register.html",
-            {
-                "request": request,
-                "error": "No active simulation session. Please wait for your teacher."
-            }
+            {"request": request, "error": "Join code not recognised. Check with your teacher."}
         )
 
-    # 🚫 Block late joiners
+    # Block late joiners
     if active_session[2] != "setup":   # status column
         return templates.TemplateResponse(
             "register.html",
-            {
-                "request": request,
-                "error": "Registration is closed. The simulation has already started."
-            }
+            {"request": request, "error": "Registration is closed. The simulation has already started."}
         )
 
     session_id = active_session[0]  # session_id is first column
@@ -397,7 +377,7 @@ def teacher_dashboard(
     conn = get_connection()
     cursor = conn.cursor()
 
-    active_session = get_active_session()
+    active_session = get_active_session_for_teacher(user["team_id"])
 
     # --------------------------------------------------
     # Competitive mode check
@@ -580,6 +560,8 @@ def teacher_dashboard(
 
     conn.close()
 
+    join_code = active_session[5] if active_session else None
+
     return templates.TemplateResponse(
         "teacher_dashboard.html",
         {
@@ -588,6 +570,7 @@ def teacher_dashboard(
             "team_count": team_count,
             "user": user,
             "active_session": active_session,
+            "join_code": join_code,
             "missing_teams": missing_teams,
             "popup_missing_teams": popup_missing_teams,
             "submitted_teams": submitted_teams,
@@ -635,7 +618,7 @@ def team_dashboard(request: Request, user=Depends(get_current_user)):
     # SESSION DATA
     # --------------------------------------------------
 
-    active_session = get_active_session()
+    active_session = get_session_for_team(user["team_id"])
 
     competitive_mode = False
     team_financials = []
@@ -800,7 +783,7 @@ def end_setup_phase(user=Depends(get_current_user)):
     import decision_engine as de
     import json
 
-    active_session = get_active_session()
+    active_session = get_active_session_for_teacher(user["team_id"])
     if not active_session:
         return RedirectResponse("/teacher-dashboard", status_code=303)
 
@@ -895,7 +878,7 @@ async def submit_decisions(request: Request, user=Depends(get_current_user)):
     from decision_engine import apply_student_decisions
     import json
 
-    active_session = get_active_session()
+    active_session = get_session_for_team(user["team_id"])
 
     if not active_session:
         return RedirectResponse("/team-dashboard", status_code=303)
@@ -985,7 +968,7 @@ async def submit_decisions(request: Request, user=Depends(get_current_user)):
         import production_process as pp
         import factory_engine as fe
 
-        active_session = get_active_session()
+        active_session = get_session_for_team(user["team_id"])
 
         biscuit_list = ie.get_all_biscuit_names()
 
@@ -1119,7 +1102,7 @@ def advance_month_route(user=Depends(get_current_user)):
     from simulation_engine import run_month
     from scenario_engine import DEFAULT_SCENARIO
 
-    active_session = get_active_session()
+    active_session = get_active_session_for_teacher(user["team_id"])
 
     if not active_session or active_session[2] != "active":
         return RedirectResponse("/teacher-dashboard", status_code=303)
@@ -1241,7 +1224,7 @@ def factory_setup_page(request: Request, user=Depends(get_current_user)):
 
     from database import get_active_session
 
-    active_session = get_active_session()
+    active_session = get_session_for_team(user["team_id"])
 
     # Only allow during setup phase
     if not active_session or active_session[2] != "setup":
@@ -1415,7 +1398,7 @@ def submit_factory_setup(
     # --------------------------------------------------
 
     from database import get_active_session
-    active_session = get_active_session()
+    active_session = get_session_for_team(user["team_id"])
     total_months = active_session[4]
 
     state["max_months"] = total_months
@@ -1506,7 +1489,7 @@ def update_scenario(
     conn = get_connection()
     cursor = conn.cursor()
 
-    active_session = get_active_session()
+    active_session = get_active_session_for_teacher(user["team_id"])
     session_id = active_session[0]
     current_month = active_session[3]
 
@@ -1564,7 +1547,7 @@ def end_session(user=Depends(get_current_user)):
     from simulation_engine import run_month
     import json
 
-    active_session = get_active_session()
+    active_session = get_active_session_for_teacher(user["team_id"])
 
     if not active_session:
         return RedirectResponse("/teacher-dashboard", status_code=303)
@@ -1620,7 +1603,7 @@ def delete_session(user=Depends(get_current_user)):
     conn = get_connection()
     cursor = conn.cursor()
 
-    active_session = get_active_session()
+    active_session = get_active_session_for_teacher(user["team_id"])
 
     if not active_session:
         conn.close()
@@ -1657,7 +1640,7 @@ def make_competitive(user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/app", status_code=303)
 
-    active_session = get_active_session()
+    active_session = get_active_session_for_teacher(user["team_id"])
 
     if not active_session:
         return RedirectResponse("/teacher-dashboard", status_code=303)

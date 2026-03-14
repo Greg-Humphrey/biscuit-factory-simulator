@@ -54,6 +54,13 @@ Simprentice is planned to become a multi-product SaaS platform:
 - This is a future project — do not pre-build it, but avoid architectural decisions
   that would make it harder to introduce later
 
+## Licensing & School Admin (Current Approach)
+- Licences are stored in the database (school and teacher level)
+- Greg manually manages school/teacher accounts in the near term — no self-service admin UI needed yet
+- Self-service school registration is the long-term vision but not being built now
+- Automatic licence management (renewals, provisioning) is a future scaling concern — ignore for now
+- Licence data should be added to the DB schema so the foundation is there without over-engineering the workflows
+
 ## Giving Greg Instructions
 - Greg is a novice coder with limited computer science knowledge
 - Always explain commands in plain English before giving them
