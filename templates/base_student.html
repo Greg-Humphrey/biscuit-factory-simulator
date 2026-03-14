@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block nav %}
+<nav class="navbar">
+    <div class="nav-left">
+        <span style="font-weight:bold;">🏭 Biscuit Factory Simulator</span>
+    </div>
+    <div class="nav-right">
+        {% if user %}
+            <span class="logged-in">🧑‍🤝‍🧑 {{ user.team_name }}</span>
+            <a href="/logout" class="btn small">Logout</a>
+        {% endif %}
+    </div>
+</nav>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+function showGlobalModal(title, message, confirmCallback){
+
+    const modal = document.getElementById("globalModal");
+    document.getElementById("modalTitle").innerText = title;
+    document.getElementById("modalMessage").innerText = message;
+    modal.style.display = "flex";
+
+    document.getElementById("modalConfirmBtn").onclick = function(){
+        closeGlobalModal();
+        if(confirmCallback) confirmCallback();
+    };
+
+}
+
+function closeGlobalModal(){
+    document.getElementById("globalModal").style.display = "none";
+}
+
+</script>
+
+<div id="globalModal" class="error-overlay" style="display:none;">
+    <div class="error-modal">
+        <h2 id="modalTitle"></h2>
+        <p id="modalMessage"></p>
+        <div style="margin-top:20px;">
+            <button id="modalConfirmBtn" class="btn teacher">Confirm</button>
+            <button onclick="closeGlobalModal()" class="btn secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

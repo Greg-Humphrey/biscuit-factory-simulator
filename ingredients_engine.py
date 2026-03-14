@@ -25,15 +25,15 @@
 # ----------------------------------------------------------
 
 ingredients = {
-    "flour": 0.45,
-    "gluten_free_flour": 1.2,
-    "eggs": 2.2,
-    "sugar": 0.65,
-    "icing": 1,
-    "butter": 5.4,
-    "vegetable_oil": 1.4,
-    "treacle": 1,
-    "vegetable_fat": 1.6
+    "flour": 0.75,
+    "gluten_free_flour": 3,
+    "eggs": 3,
+    "sugar": 1.2,
+    "icing": 2.3,
+    "butter": 10.5,
+    "vegetable_oil": 2.2,
+    "treacle": 2.6,
+    "vegetable_fat": 3.7
 }
 
 
