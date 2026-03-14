@@ -213,6 +213,7 @@
 
             {% if active_session[2] == "setup" %}
             <form method="post" action="/end-setup-phase">
+                <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                 <button type="submit" class="btn">
                     🚀 End Setup Phase & Start Month 1
                 </button>
@@ -225,6 +226,7 @@
                   id="advanceForm"
                   data-missing='{{ popup_missing_teams | tojson }}'
                   data-month="{{ current_month }}">
+                <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                 {% if current_month < total_months %}
                     <button type="button" class="btn teacher" onclick="confirmAdvance()">➡ Advance Month</button>
                 {% else %}
@@ -233,6 +235,7 @@
             </form>
 
             <form method="post" action="/end-session">
+                <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                 <button type="button" class="btn secondary" onclick="confirmEndSession()">🛑 End Session Early</button>
             </form>
             {% endif %}
@@ -240,6 +243,7 @@
             {% if active_session[2] == "finished" %}
             {% if not competitive_mode %}
             <form method="post" action="/make-competitive">
+                <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                 <button type="button" class="btn teacher" onclick="confirmCompetitive()">🏆 Make This Competitive</button>
             </form>
             {% else %}
@@ -247,11 +251,13 @@
             {% endif %}
 
             <form method="post" action="/create-pdfs">
+                <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                 <button type="submit" class="btn teacher">📄 Create PDFs</button>
             </form>
             {% endif %}
 
             <form method="post" action="/delete-session">
+                <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                 <button type="button" class="btn secondary" onclick="confirmDeleteSession()">🗑 Delete Session</button>
             </form>
 
@@ -260,15 +266,10 @@
     </div>
 
 {% else %}
-
-    <h3>Create New Session</h3>
-
-    <form method="post" action="/create-session">
-        <input type="text" name="session_name" placeholder="Session name" required>
-        <input type="number" name="total_months" placeholder="Total months" min="1" required>
-        <button type="submit">Start Session</button>
-    </form>
-
+<div style="text-align:center; padding:20px 0; color:#777;">
+    <p>No session selected.</p>
+    <a href="/hub" class="btn btn-open" style="margin-top:0;">← Back to Simulator Hub</a>
+</div>
 {% endif %}
 
 </div>
@@ -329,6 +330,7 @@
                     <td>
                         <form method="post" action="/rename-team" class="inline-form">
                             <input type="hidden" name="team_id" value="{{ team_id }}">
+                            <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                             <input type="text" name="new_name" placeholder="New name" required>
                             <button type="submit">Update</button>
                         </form>
@@ -336,6 +338,7 @@
 
                     <td>
                         <form method="post" action="/delete-team/{{ team_id }}">
+                            <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                             <button type="button"
                                     class="btn secondary"
                                     onclick="confirmDeleteTeam(this)">
@@ -375,6 +378,7 @@
 
             <form method="post" action="/update-scenario">
 
+                <input type="hidden" name="session_id" value="{{ active_session[0] }}">
                 <input type="hidden" name="month" value="{{ month }}">
 
                 <label>Scenario Name</label>

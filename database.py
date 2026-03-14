@@ -242,20 +242,6 @@ def create_new_session(session_name, total_months, teacher_id=None):
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Deactivate any existing active session for this teacher
-        if teacher_id:
-            cursor.execute("""
-                UPDATE simulation_sessions
-                SET status = 'finished'
-                WHERE teacher_id = ? AND status != 'finished'
-            """, (teacher_id,))
-        else:
-            cursor.execute("""
-                UPDATE simulation_sessions
-                SET status = 'finished'
-                WHERE status != 'finished'
-            """)
-
         session_id = str(uuid.uuid4())
 
         # Generate a unique 6-character join code
@@ -481,6 +467,72 @@ def get_session_for_team(team_id):
             WHERE t.team_id = ?
         """, (team_id,))
         return cursor.fetchone()
+
+
+def get_all_sessions_for_teacher(teacher_id):
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT session_id, session_name, status, current_month, total_months, join_code
+            FROM simulation_sessions
+            WHERE teacher_id = ?
+            ORDER BY created_at DESC
+        """, (teacher_id,))
+        return cursor.fetchall()
+
+
+def count_sessions_for_teacher(teacher_id):
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM simulation_sessions WHERE teacher_id = ?",
+            (teacher_id,)
+        )
+        return cursor.fetchone()[0]
+
+
+def get_session_by_id(session_id, teacher_id):
+    """Load a specific session, verifying teacher ownership."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT session_id, session_name, status, current_month, total_months, join_code
+            FROM simulation_sessions
+            WHERE session_id = ? AND teacher_id = ?
+        """, (session_id, teacher_id))
+        return cursor.fetchone()
+
+
+def copy_session(original_session_id, new_name, teacher_id):
+    """Create a new session copying total_months and scenario_state only. Returns new join_code."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT total_months, scenario_state FROM simulation_sessions WHERE session_id = ?",
+            (original_session_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        total_months, scenario_state = row
+
+        new_session_id = str(uuid.uuid4())
+        join_code = _generate_join_code()
+        cursor.execute("SELECT session_id FROM simulation_sessions WHERE join_code = ?", (join_code,))
+        while cursor.fetchone():
+            join_code = _generate_join_code()
+            cursor.execute("SELECT session_id FROM simulation_sessions WHERE join_code = ?", (join_code,))
+
+        cursor.execute("""
+            INSERT INTO simulation_sessions (
+                session_id, session_name, status, current_month, total_months,
+                scenario_state, created_at, teacher_id, join_code
+            ) VALUES (?, ?, 'setup', 0, ?, ?, ?, ?, ?)
+        """, (
+            new_session_id, new_name, total_months, scenario_state,
+            datetime.utcnow().isoformat(), teacher_id, join_code
+        ))
+        return join_code
 
 
 # ---------------------------------------------------------

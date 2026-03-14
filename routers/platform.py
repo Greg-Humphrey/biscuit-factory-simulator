@@ -13,7 +13,8 @@ from database import (
     get_db,
     register_teacher,
     authenticate_teacher_by_email,
-    get_active_session_for_teacher,
+    get_all_sessions_for_teacher,
+    count_sessions_for_teacher,
     get_session_by_join_code,
     get_session_for_team,
 )
@@ -43,23 +44,19 @@ def simulator_hub(request: Request, user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    active_session = get_active_session_for_teacher(user["team_id"])
-
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT COUNT(*) FROM simulation_sessions WHERE teacher_id = ?",
-            (user["team_id"],)
-        )
-        total_sessions = cursor.fetchone()[0]
+    all_sessions = get_all_sessions_for_teacher(user["team_id"])
+    session_count = len(all_sessions)
+    can_create = session_count < 6
 
     return templates.TemplateResponse(
         "platform/simulator_hub.html",
         {
             "request": request,
             "user": user,
-            "biscuit_session": active_session,
-            "total_sessions": total_sessions,
+            "biscuit_sessions": all_sessions,
+            "session_count": session_count,
+            "can_create": can_create,
+            "session_limit": 6,
         }
     )
 

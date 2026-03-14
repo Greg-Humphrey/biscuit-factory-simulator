@@ -33,7 +33,6 @@
             border-radius: 10px;
             border: 1px solid #e0e0e0;
             padding: 28px;
-            width: 300px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             display: flex;
             flex-direction: column;
@@ -57,10 +56,6 @@
             margin: 4px 0;
         }
 
-        .session-status {
-            font-size: 13px;
-        }
-
         .status-badge {
             display: inline-block;
             padding: 3px 10px;
@@ -75,13 +70,15 @@
         .badge-finished { background: #f0f0f0; color: #555; }
 
         .sim-tile .btn {
-            display: block;
+            display: inline-block;
             text-align: center;
             padding: 11px;
             font-size: 15px;
             border-radius: 6px;
             text-decoration: none;
             font-weight: bold;
+            cursor: pointer;
+            border: none;
         }
 
         .btn-open {
@@ -151,6 +148,47 @@
             font-size: 13px;
             font-weight: bold;
         }
+
+        .session-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .session-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .session-row:last-child { border-bottom: none; }
+
+        .session-row-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .session-row-name {
+            font-weight: bold;
+            font-size: 15px;
+            color: #1e293b;
+        }
+
+        .session-row-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .copy-form {
+            background: #f8faff;
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 <body>
@@ -175,7 +213,7 @@
     <div class="simulator-grid">
 
         <!-- Biscuit Factory Simulator tile -->
-        <div class="sim-tile">
+        <div class="sim-tile" style="width:100%; max-width:700px;">
             <div>
                 <h2>🏭 Biscuit Factory</h2>
                 <p class="subject">A-Level Business &amp; Economics</p>
@@ -183,42 +221,61 @@
 
             <hr class="divider">
 
-            <div class="session-status">
-                {% if biscuit_session %}
-                    {% if biscuit_session[2] == "setup" %}
-                        <span>Current session:</span>
-                        <span class="status-badge badge-setup">Setup</span>
-                        <div style="margin-top:6px; color:#555;">{{ biscuit_session[1] }}</div>
-                    {% elif biscuit_session[2] == "active" %}
-                        <span>Current session:</span>
-                        <span class="status-badge badge-active">Active</span>
-                        <div style="margin-top:6px; color:#555;">
-                            {{ biscuit_session[1] }}
-                            — Month {{ biscuit_session[3] }} of {{ biscuit_session[4] }}
-                        </div>
-                    {% elif biscuit_session[2] == "finished" %}
-                        <span>Last session:</span>
-                        <span class="status-badge badge-finished">Finished</span>
-                        <div style="margin-top:6px; color:#888;">{{ biscuit_session[1] }}</div>
-                    {% endif %}
-                    {% if total_sessions > 1 %}
-                        <div style="margin-top:4px; color:#aaa; font-size:12px;">{{ total_sessions }} total sessions</div>
-                    {% endif %}
-                {% else %}
-                    <span style="color:#aaa;">No sessions yet</span>
-                {% endif %}
+            {% if biscuit_sessions %}
+            <div class="session-list">
+                {% for s in biscuit_sessions %}
+                <div class="session-row">
+                    <div class="session-row-info">
+                        <span class="session-row-name">{{ s[1] }}</span>
+                        <span class="session-row-meta">
+                            {% if s[2] == "setup" %}
+                                <span class="status-badge badge-setup">Setup</span>
+                            {% elif s[2] == "active" %}
+                                <span class="status-badge badge-active">Active</span>
+                                <span style="color:#555; font-size:13px; margin-left:6px;">Month {{ s[3] }}/{{ s[4] }}</span>
+                            {% else %}
+                                <span class="status-badge badge-finished">Finished</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="session-row-actions">
+                        <a href="/teacher-dashboard?session_id={{ s[0] }}" class="btn btn-open" style="padding:6px 14px; font-size:13px; margin-top:0;">Open</a>
+                        {% if can_create %}
+                        <button class="btn btn-new" style="padding:6px 14px; font-size:13px; margin-top:0;" onclick="showCopyForm('{{ s[0] }}')">Copy</button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Inline copy form (hidden by default) -->
+                <div id="copy-form-{{ s[0] }}" class="copy-form" style="display:none;">
+                    <form method="post" action="/copy-session" style="display:flex; gap:8px; align-items:center; padding:8px 0;">
+                        <input type="hidden" name="session_id" value="{{ s[0] }}">
+                        <input type="text" name="new_name" placeholder="New session name" required style="flex:1; padding:6px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+                        <button type="submit" class="btn btn-open" style="padding:6px 14px; font-size:13px; margin-top:0;">Create Copy</button>
+                        <button type="button" class="btn btn-new" style="padding:6px 14px; font-size:13px; margin-top:0;" onclick="hideCopyForm('{{ s[0] }}')">Cancel</button>
+                    </form>
+                </div>
+                {% endfor %}
             </div>
+            {% else %}
+            <p style="color:#aaa; font-size:14px;">No sessions yet. Create your first below.</p>
+            {% endif %}
 
             <hr class="divider">
 
-            {% if biscuit_session and biscuit_session[2] in ["setup", "active"] %}
-                <a href="/teacher-dashboard" class="btn btn-open">Open session</a>
-                <a href="/teacher-dashboard#create-session" class="btn btn-new">New session</a>
+            {% if can_create %}
+            <button class="btn btn-open" style="width:100%; margin-top:0;" onclick="document.getElementById('new-session-form').style.display='block'; this.style.display='none';">+ New Session</button>
+            <div id="new-session-form" style="display:none;">
+                <form method="post" action="/create-session">
+                    <input type="text" name="session_name" placeholder="Session name" required style="padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; width:100%; margin-bottom:8px;">
+                    <input type="number" name="total_months" placeholder="Number of months" min="1" max="24" required style="padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:14px; width:100%; margin-bottom:8px;">
+                    <button type="submit" class="btn btn-open" style="width:100%; margin-top:0;">Create Session</button>
+                </form>
+            </div>
             {% else %}
-                <a href="/teacher-dashboard" class="btn btn-open">
-                    {% if biscuit_session %}View sessions{% else %}Get started{% endif %}
-                </a>
+            <p style="color:#e53e3e; font-size:13px; text-align:center; margin:0;">Session limit reached ({{ session_count }}/{{ session_limit }}) — delete a session to create a new one.</p>
             {% endif %}
+
         </div>
 
         <!-- Placeholder: future simulators -->
@@ -228,11 +285,22 @@
                 <p class="subject">A-Level Business</p>
             </div>
             <hr class="divider">
-            <div class="session-status" style="color:#aaa;">Coming soon</div>
+            <div style="color:#aaa;">Coming soon</div>
         </div>
 
     </div>
 
 </div>
+
+<script>
+function showCopyForm(sessionId) {
+    document.querySelectorAll('.copy-form').forEach(f => f.style.display = 'none');
+    document.getElementById('copy-form-' + sessionId).style.display = 'block';
+}
+function hideCopyForm(sessionId) {
+    document.getElementById('copy-form-' + sessionId).style.display = 'none';
+}
+</script>
+
 </body>
 </html>

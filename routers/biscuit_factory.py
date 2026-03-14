@@ -16,7 +16,10 @@ from database import (
     build_team_financials,
     get_active_session,
     create_new_session,
-    get_active_session_for_teacher,
+    get_all_sessions_for_teacher,
+    count_sessions_for_teacher,
+    get_session_by_id,
+    copy_session,
     get_session_by_join_code,
     get_session_for_team,
     save_team_simulation_state,
@@ -51,8 +54,24 @@ def create_session(
 ):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/", status_code=303)
+    if count_sessions_for_teacher(user["team_id"]) >= 6:
+        return RedirectResponse("/hub", status_code=303)
     create_new_session(session_name, total_months, teacher_id=user["team_id"])
-    return RedirectResponse("/teacher-dashboard", status_code=303)
+    return RedirectResponse("/hub", status_code=303)
+
+
+@router.post("/copy-session")
+def copy_session_route(
+    session_id: str = Form(...),
+    new_name: str = Form(...),
+    user=Depends(get_current_user)
+):
+    if not user or user["role"] != "teacher":
+        return RedirectResponse("/", status_code=303)
+    if count_sessions_for_teacher(user["team_id"]) >= 6:
+        return RedirectResponse("/hub", status_code=303)
+    copy_session(session_id, new_name, user["team_id"])
+    return RedirectResponse("/hub", status_code=303)
 
 
 # ============================================================
@@ -117,13 +136,14 @@ def register_team(
 @router.get("/teacher-dashboard", response_class=HTMLResponse)
 def teacher_dashboard(
     request: Request,
+    session_id: str = None,
     missing: str = None,
     user=Depends(get_current_user)
 ):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    active_session = get_active_session_for_teacher(user["team_id"])
+    active_session = get_session_by_id(session_id, user["team_id"]) if session_id else None
 
     competitive_mode = False
     if active_session:
@@ -273,10 +293,12 @@ def teacher_dashboard(
 
 
 @router.post("/delete-team/{team_id}")
-def delete_team_route(team_id: str, user=Depends(get_current_user)):
+def delete_team_route(team_id: str, session_id: str = Form(None), user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
     delete_team(team_id)
+    if session_id:
+        return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
     return RedirectResponse("/teacher-dashboard", status_code=303)
 
 
@@ -383,13 +405,13 @@ def team_dashboard(request: Request, user=Depends(get_current_user)):
 # ============================================================
 
 @router.post("/end-setup-phase")
-def end_setup_phase(user=Depends(get_current_user)):
+def end_setup_phase(session_id: str = Form(...), user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
     import decision_engine as de
 
-    active_session = get_active_session_for_teacher(user["team_id"])
+    active_session = get_session_by_id(session_id, user["team_id"])
     if not active_session:
         return RedirectResponse("/teacher-dashboard", status_code=303)
 
@@ -432,7 +454,7 @@ def end_setup_phase(user=Depends(get_current_user)):
             UPDATE simulation_sessions SET status = 'active', current_month = 1
             WHERE session_id = ?
         """, (session_id,))
-    return RedirectResponse("/teacher-dashboard", status_code=303)
+    return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
 
 # ============================================================
@@ -580,13 +602,13 @@ def run_current_month_for_all_teams(session_id, current_month, scenario):
 # ============================================================
 
 @router.post("/advance-month")
-def advance_month_route(user=Depends(get_current_user)):
+def advance_month_route(session_id: str = Form(...), user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    active_session = get_active_session_for_teacher(user["team_id"])
+    active_session = get_session_by_id(session_id, user["team_id"])
     if not active_session or active_session[2] != "active":
-        return RedirectResponse("/teacher-dashboard", status_code=303)
+        return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
     session_id = active_session[0]
     current_month = active_session[3]
@@ -618,7 +640,7 @@ def advance_month_route(user=Depends(get_current_user)):
 
     if current_month == 1 and missing_teams:
         return RedirectResponse(
-            f"/teacher-dashboard?missing={','.join(missing_teams)}",
+            f"/teacher-dashboard?session_id={session_id}&missing={','.join(missing_teams)}",
             status_code=303
         )
 
@@ -636,7 +658,7 @@ def advance_month_route(user=Depends(get_current_user)):
                 "UPDATE simulation_sessions SET current_month = ? WHERE session_id = ?",
                 (next_month, session_id)
             )
-    return RedirectResponse("/teacher-dashboard", status_code=303)
+    return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
 
 # ============================================================
@@ -776,6 +798,7 @@ def submit_factory_setup(
 def rename_team(
     team_id: str = Form(...),
     new_name: str = Form(...),
+    session_id: str = Form(...),
     user=Depends(get_current_user)
 ):
     if not user or user["role"] != "teacher":
@@ -783,12 +806,13 @@ def rename_team(
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("UPDATE teams SET team_name = ? WHERE team_id = ?", (new_name, team_id))
-    return RedirectResponse("/teacher-dashboard", status_code=303)
+    return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
 
 @router.post("/update-scenario")
 def update_scenario(
     request: Request,
+    session_id: str = Form(...),
     month: int = Form(...),
     name: str = Form(...),
     scrap_qc: float = Form(...),
@@ -806,12 +830,13 @@ def update_scenario(
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    active_session = get_active_session_for_teacher(user["team_id"])
-    session_id = active_session[0]
+    active_session = get_session_by_id(session_id, user["team_id"])
+    if not active_session:
+        return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
     current_month = active_session[3]
 
     if month < current_month:
-        return RedirectResponse("/teacher-dashboard", status_code=303)
+        return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
     with get_db() as conn:
         cursor = conn.cursor()
@@ -836,17 +861,17 @@ def update_scenario(
             "UPDATE simulation_sessions SET scenario_state = ? WHERE session_id = ?",
             (json.dumps(scenario_state), session_id)
         )
-    return RedirectResponse("/teacher-dashboard", status_code=303)
+    return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
 
 @router.post("/end-session")
-def end_session(user=Depends(get_current_user)):
+def end_session(session_id: str = Form(...), user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    active_session = get_active_session_for_teacher(user["team_id"])
+    active_session = get_session_by_id(session_id, user["team_id"])
     if not active_session:
-        return RedirectResponse("/teacher-dashboard", status_code=303)
+        return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
     session_id = active_session[0]
     current_month = active_session[3]
@@ -869,17 +894,17 @@ def end_session(user=Depends(get_current_user)):
             UPDATE simulation_sessions SET status = 'finished', current_month = ?
             WHERE session_id = ?
         """, (current_month, session_id))
-    return RedirectResponse("/teacher-dashboard", status_code=303)
+    return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
 
 @router.post("/delete-session")
-def delete_session(user=Depends(get_current_user)):
+def delete_session(session_id: str = Form(...), user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    active_session = get_active_session_for_teacher(user["team_id"])
+    active_session = get_session_by_id(session_id, user["team_id"])
     if not active_session:
-        return RedirectResponse("/teacher-dashboard", status_code=303)
+        return RedirectResponse("/hub", status_code=303)
 
     session_id = active_session[0]
     with get_db() as conn:
@@ -889,17 +914,17 @@ def delete_session(user=Depends(get_current_user)):
             (session_id,)
         )
         cursor.execute("DELETE FROM simulation_sessions WHERE session_id = ?", (session_id,))
-    return RedirectResponse("/teacher-dashboard", status_code=303)
+    return RedirectResponse("/hub", status_code=303)
 
 
 @router.post("/make-competitive")
-def make_competitive(user=Depends(get_current_user)):
+def make_competitive(session_id: str = Form(...), user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return RedirectResponse("/teacher-login", status_code=303)
 
-    active_session = get_active_session_for_teacher(user["team_id"])
+    active_session = get_session_by_id(session_id, user["team_id"])
     if not active_session:
-        return RedirectResponse("/teacher-dashboard", status_code=303)
+        return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
     with get_db() as conn:
         cursor = conn.cursor()
@@ -907,7 +932,7 @@ def make_competitive(user=Depends(get_current_user)):
             "UPDATE simulation_sessions SET competitive_mode = 1 WHERE session_id = ?",
             (active_session[0],)
         )
-    return RedirectResponse("/teacher-dashboard", status_code=303)
+    return RedirectResponse(f"/teacher-dashboard?session_id={session_id}", status_code=303)
 
 
 # ============================================================
@@ -915,13 +940,13 @@ def make_competitive(user=Depends(get_current_user)):
 # ============================================================
 
 @router.post("/create-pdfs")
-def create_pdfs(user=Depends(get_current_user)):
+def create_pdfs(session_id: str = Form(...), user=Depends(get_current_user)):
     if not user or user["role"] != "teacher":
         return {"error": "Unauthorised"}
 
-    session = get_active_session_for_teacher(user["team_id"])
+    session = get_session_by_id(session_id, user["team_id"])
     if not session:
-        return {"error": "No active session found"}
+        return {"error": "No session found"}
 
     from pdf_engine import generate_all_reports, create_zip
     files = generate_all_reports(session[0])
