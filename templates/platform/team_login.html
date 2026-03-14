@@ -1,21 +1,47 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Team login – Simprentice</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { background-color: #f0e6d3; }
+    </style>
+</head>
+<body>
 
-{% block content %}
-<h2>Team Login</h2>
+<nav class="platform-nav">
+    <a class="brand" href="/">Simprentice</a>
+</nav>
 
-{% if error %}
-<div class="error-message">
-    {{ error }}
+<div class="container">
+    <div class="card" style="max-width:420px; margin:60px auto; text-align:center;">
+
+        <h2 style="margin-top:0; margin-bottom:4px;">Log in to your team</h2>
+        <p style="color:#888; font-size:14px; margin:0 0 20px 0;">🏭 Biscuit Factory Simulator</p>
+
+        {% if error %}
+            <div class="error" style="margin-bottom:16px;">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/team-login" style="text-align:left; margin-top:20px;">
+
+            <label>Team Name</label>
+            <input type="text" name="team_name" required autofocus>
+
+            <label>3-Digit Password</label>
+            <input type="password" name="password" required>
+
+            <button type="submit" class="btn" style="width:100%; margin-top:8px;">Log in</button>
+
+        </form>
+
+        <div style="margin-top:24px; border-top:1px solid #eee; padding-top:16px;">
+            <a href="/student" style="color:#888; font-size:13px;">Need a class code? Enter it here</a>
+        </div>
+
+    </div>
 </div>
-{% endif %}
 
-<form method="post" action="/team-login">
-    <label>Team Name:</label>
-    <input type="text" name="team_name" required>
-
-    <label>3-Digit Code:</label>
-    <input type="password" name="password" required>
-
-    <button type="submit">Login as Team</button>
-</form>
-{% endblock %}
+</body>
+</html>

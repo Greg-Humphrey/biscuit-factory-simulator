@@ -1,15 +1,30 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Register your team – Simprentice</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { background-color: #f0e6d3; }
+    </style>
+</head>
+<body>
 
-{% block content %}
-<div class="card">
-        <h1>🏭 Biscuit Factory Simulator</h1>
-        <h2>Team Registration</h2>
+<nav class="platform-nav">
+    <a class="brand" href="/">Simprentice</a>
+</nav>
+
+<div class="container">
+    <div class="card" style="max-width:420px; margin:60px auto; text-align:center;">
+
+        <h2 style="margin-top:0; margin-bottom:4px;">Register your team</h2>
+        <p style="color:#888; font-size:14px; margin-top:0 0 20px 0;">🏭 Biscuit Factory Simulator</p>
 
         {% if error %}
-            <div class="error">{{ error }}</div>
+            <div class="error" style="margin-bottom:16px;">{{ error }}</div>
         {% endif %}
 
-        <form method="post" action="/register">
+        <form method="post" action="/register" style="text-align:left; margin-top:20px;">
 
             <label>Class Join Code</label>
             <input
@@ -32,12 +47,16 @@
             <label>3-Digit Password</label>
             <input type="text" name="password" maxlength="3" required>
 
-            <button type="submit">Create Team</button>
+            <button type="submit" class="btn teacher" style="width:100%; margin-top:8px;">Create Team</button>
+
         </form>
 
-        <div class="link">
-            <a href="/team-login">Already registered? Login here</a>
+        <div style="margin-top:24px; border-top:1px solid #eee; padding-top:16px;">
+            <a href="/team-login" style="color:#888; font-size:13px;">Already registered? Log in here</a>
         </div>
 
     </div>
-{% endblock %}
+</div>
+
+</body>
+</html>
