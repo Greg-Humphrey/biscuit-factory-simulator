@@ -31,14 +31,22 @@ def get_current_user(request: Request):
         return None
 
 
-def authenticate_user(team_name: str, password: str):
-    """Authenticate student teams by team_name + password."""
+def authenticate_user(team_name: str, password: str, join_code: str = None):
+    """Authenticate student teams by team_name + password, scoped to a session via join_code."""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT team_id, team_name, password, role FROM teams WHERE team_name = ? AND role = 'team'",
-            (team_name,)
-        )
+        if join_code:
+            cursor.execute("""
+                SELECT t.team_id, t.team_name, t.password, t.role
+                FROM teams t
+                JOIN simulation_sessions s ON t.session_id = s.session_id
+                WHERE t.team_name = ? AND t.role = 'team' AND s.join_code = ?
+            """, (team_name, join_code.upper()))
+        else:
+            cursor.execute(
+                "SELECT team_id, team_name, password, role FROM teams WHERE team_name = ? AND role = 'team'",
+                (team_name,)
+            )
         user = cursor.fetchone()
     if user and user[2] == password:
         return {"team_id": user[0], "team_name": user[1], "role": user[3]}

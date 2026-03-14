@@ -110,11 +110,11 @@ def register_team(
     with get_db() as conn:
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM teams WHERE team_name = ?", (team_name,))
+        cursor.execute("SELECT * FROM teams WHERE team_name = ? AND session_id = ?", (team_name, session_id))
         if cursor.fetchone():
             return templates.TemplateResponse(
                 "biscuit_factory/register.html",
-                {"request": request, "error": "Team name already exists."}
+                {"request": request, "error": "Team name already exists in this session.", "join_code": join_code}
             )
 
         team_id = str(uuid.uuid4())

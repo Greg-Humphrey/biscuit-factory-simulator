@@ -161,21 +161,22 @@ def teacher_register(
 # ============================================================
 
 @router.get("/team-login", response_class=HTMLResponse)
-def team_login_page(request: Request):
-    return templates.TemplateResponse("platform/team_login.html", {"request": request})
+def team_login_page(request: Request, code: str = None):
+    return templates.TemplateResponse("platform/team_login.html", {"request": request, "join_code": code})
 
 
 @router.post("/team-login")
 def team_login(
     request: Request,
     team_name: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...),
+    join_code: str = Form("")
 ):
-    user = authenticate_user(team_name, password)
+    user = authenticate_user(team_name, password, join_code or None)
     if not user or user["role"] != "team":
         return templates.TemplateResponse(
             "platform/team_login.html",
-            {"request": request, "error": "Wrong team name or password"}
+            {"request": request, "error": "Wrong team name or password", "join_code": join_code}
         )
     token = create_access_token(
         {"team_id": user["team_id"], "team_name": user["team_name"], "role": user["role"]}

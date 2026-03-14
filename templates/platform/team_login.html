@@ -26,6 +26,8 @@
 
         <form method="post" action="/team-login" style="text-align:left; margin-top:20px;">
 
+            <input type="hidden" name="join_code" value="{{ join_code or '' }}">
+
             <label>Team Name</label>
             <input type="text" name="team_name" required autofocus>
 
