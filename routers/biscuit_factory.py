@@ -32,9 +32,9 @@ router = APIRouter()
 # TEAM ENTRY (legacy /app route kept for bookmarks)
 # ============================================================
 
-@router.get("/app", response_class=HTMLResponse)
-def simulator_entry(request: Request):
-    return templates.TemplateResponse("biscuit_factory/home.html", {"request": request})
+@router.get("/app")
+def simulator_entry():
+    return RedirectResponse("/student", status_code=303)
 
 
 # ============================================================
@@ -106,7 +106,11 @@ def register_team(
 
     conn.commit()
     conn.close()
-    return RedirectResponse("/app", status_code=303)
+
+    token = create_access_token({"team_id": team_id, "team_name": team_name, "role": "team"})
+    response = RedirectResponse("/team-dashboard", status_code=303)
+    response.set_cookie("access_token", token, httponly=True)
+    return response
 
 
 # ============================================================

@@ -14,6 +14,7 @@ from database import (
     authenticate_teacher_by_email,
     get_active_session_for_teacher,
     get_session_by_join_code,
+    get_session_for_team,
 )
 
 router = APIRouter()
@@ -83,7 +84,11 @@ def dashboard(user=Depends(get_current_user)):
 @router.get("/logout")
 def logout(request: Request):
     user = get_current_user(request)
-    redirect_to = "/student" if user and user["role"] == "team" else "/"
+    if user and user["role"] == "team":
+        session = get_session_for_team(user["team_id"])
+        redirect_to = f"/join/{session[5]}" if session else "/student"
+    else:
+        redirect_to = "/"
     response = RedirectResponse(redirect_to, status_code=303)
     response.delete_cookie("access_token")
     return response

@@ -123,6 +123,12 @@ h2 {
     margin-left: 16px;
 }
 
+.sim-inner-nav .btn {
+    margin-top: 0;
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
 .sim-inner-nav .team-name {
     color: #cbd5e1;
     font-size: 14px;
