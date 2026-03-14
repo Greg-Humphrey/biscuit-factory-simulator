@@ -111,36 +111,59 @@
             font-style: italic;
         }
 
-        .nav-bar {
+        .top-nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 0;
+            padding: 14px 28px;
+            background: white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
         }
 
-        .nav-bar a {
-            color: #555;
+        .top-nav .brand {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c7be5;
             text-decoration: none;
-            font-size: 14px;
         }
 
-        .nav-bar a:hover { color: #2c7be5; }
+        .top-nav .user-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: #444;
+        }
+
+        .top-nav .user-area a {
+            color: #2c7be5;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .top-nav .user-area a:hover { text-decoration: underline; }
+
+        .user-badge {
+            background: #eef4ff;
+            color: #2c7be5;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 13px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-
-    <!-- Top nav -->
-    <div class="nav-bar">
-        <strong style="font-size:18px; color:#333;">Simprentice</strong>
-        <div style="display:flex; gap:20px; align-items:center;">
-            <span style="color:#777; font-size:14px;">{{ user.team_name }}</span>
-            <a href="/logout">Sign out</a>
-        </div>
+<nav class="top-nav">
+    <a class="brand" href="/">Simprentice</a>
+    <div class="user-area">
+        <span class="user-badge">{{ user.team_name }}</span>
+        <a href="/logout">Sign out</a>
     </div>
+</nav>
+
+<div class="container">
 
     <!-- Header -->
     <div class="hub-header">

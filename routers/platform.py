@@ -113,7 +113,7 @@ def teacher_login(
     token = create_access_token(
         {"team_id": user["team_id"], "team_name": user["team_name"], "role": user["role"]}
     )
-    response = RedirectResponse("/dashboard", status_code=303)
+    response = RedirectResponse("/", status_code=303)
     response.set_cookie("access_token", token, httponly=True)
     return response
 
@@ -149,7 +149,7 @@ def teacher_register(
             {"request": request, "error": error}
         )
     token = create_access_token({"team_id": teacher_id, "team_name": name, "role": "teacher"})
-    response = RedirectResponse("/hub", status_code=303)
+    response = RedirectResponse("/", status_code=303)
     response.set_cookie("access_token", token, httponly=True)
     return response
 
