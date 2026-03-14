@@ -28,7 +28,7 @@ def homepage(request: Request):
     host = request.headers.get("host", "")
     if host.startswith("sim."):
         return RedirectResponse(url="https://simprentice.com/app")
-    return templates.TemplateResponse("marketing/homepage.html", {"request": request})
+    return templates.TemplateResponse("platform/marketing/homepage.html", {"request": request})
 
 
 # ============================================================
@@ -52,7 +52,7 @@ def simulator_hub(request: Request, user=Depends(get_current_user)):
     conn.close()
 
     return templates.TemplateResponse(
-        "simulator_hub.html",
+        "platform/simulator_hub.html",
         {
             "request": request,
             "user": user,
@@ -94,7 +94,7 @@ def logout(request: Request):
 
 @router.get("/teacher-login", response_class=HTMLResponse)
 def teacher_login_page(request: Request):
-    return templates.TemplateResponse("teacher_login.html", {"request": request})
+    return templates.TemplateResponse("platform/teacher_login.html", {"request": request})
 
 
 @router.post("/teacher-login")
@@ -106,7 +106,7 @@ def teacher_login(
     user = authenticate_teacher_by_email(email, password)
     if not user:
         return templates.TemplateResponse(
-            "teacher_login.html",
+            "platform/teacher_login.html",
             {"request": request, "error": "Email or password not recognised."}
         )
     token = create_access_token(
@@ -119,7 +119,7 @@ def teacher_login(
 
 @router.get("/teacher-register", response_class=HTMLResponse)
 def teacher_register_page(request: Request):
-    return templates.TemplateResponse("teacher_register.html", {"request": request})
+    return templates.TemplateResponse("platform/teacher_register.html", {"request": request})
 
 
 @router.post("/teacher-register")
@@ -133,18 +133,18 @@ def teacher_register(
 ):
     if password != confirm_password:
         return templates.TemplateResponse(
-            "teacher_register.html",
+            "platform/teacher_register.html",
             {"request": request, "error": "Passwords do not match."}
         )
     if len(password) < 8:
         return templates.TemplateResponse(
-            "teacher_register.html",
+            "platform/teacher_register.html",
             {"request": request, "error": "Password must be at least 8 characters."}
         )
     teacher_id, error = register_teacher(name, email, school_name, password)
     if error:
         return templates.TemplateResponse(
-            "teacher_register.html",
+            "platform/teacher_register.html",
             {"request": request, "error": error}
         )
     token = create_access_token({"team_id": teacher_id, "team_name": name, "role": "teacher"})
@@ -159,7 +159,7 @@ def teacher_register(
 
 @router.get("/team-login", response_class=HTMLResponse)
 def team_login_page(request: Request):
-    return templates.TemplateResponse("team_login.html", {"request": request})
+    return templates.TemplateResponse("platform/team_login.html", {"request": request})
 
 
 @router.post("/team-login")
@@ -171,7 +171,7 @@ def team_login(
     user = authenticate_user(team_name, password)
     if not user or user["role"] != "team":
         return templates.TemplateResponse(
-            "team_login.html",
+            "platform/team_login.html",
             {"request": request, "error": "Wrong team name or password"}
         )
     token = create_access_token(
@@ -188,7 +188,7 @@ def team_login(
 
 @router.get("/student", response_class=HTMLResponse)
 def student_entry_page(request: Request):
-    return templates.TemplateResponse("student_entry.html", {"request": request})
+    return templates.TemplateResponse("platform/student_entry.html", {"request": request})
 
 
 @router.post("/student")
@@ -203,7 +203,7 @@ def session_landing(request: Request, code: str):
 
     if not session:
         return templates.TemplateResponse(
-            "student_entry.html",
+            "platform/student_entry.html",
             {"request": request, "error": "That code wasn't recognised. Check with your teacher."}
         )
 
@@ -218,7 +218,7 @@ def session_landing(request: Request, code: str):
         teacher_first_name = teacher_row[0].split()[0]
 
     return templates.TemplateResponse(
-        "session_landing.html",
+        "platform/session_landing.html",
         {
             "request": request,
             "session_name": session[1],

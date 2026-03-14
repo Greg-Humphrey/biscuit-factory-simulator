@@ -11,7 +11,7 @@ env = Environment(loader=FileSystemLoader("templates"))
 
 def generate_teacher_pdf(session_data, folder):
 
-    template = env.get_template("teacher_dashboard_pdf.html")
+    template = env.get_template("biscuit_factory/teacher_dashboard_pdf.html")
 
     html = template.render(**session_data)
 
@@ -23,7 +23,7 @@ def generate_teacher_pdf(session_data, folder):
 
 def generate_team_pdf(team_data, folder):
 
-    template = env.get_template("team_dashboard_pdf.html")
+    template = env.get_template("biscuit_factory/team_dashboard_pdf.html")
 
     html = template.render(**team_data)
 

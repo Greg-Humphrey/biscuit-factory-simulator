@@ -34,7 +34,7 @@ router = APIRouter()
 
 @router.get("/app", response_class=HTMLResponse)
 def simulator_entry(request: Request):
-    return templates.TemplateResponse("home.html", {"request": request})
+    return templates.TemplateResponse("biscuit_factory/home.html", {"request": request})
 
 
 # ============================================================
@@ -61,7 +61,7 @@ def create_session(
 @router.get("/register", response_class=HTMLResponse)
 def register_page(request: Request, code: str = None):
     return templates.TemplateResponse(
-        "register.html",
+        "biscuit_factory/register.html",
         {"request": request, "prefilled_code": code.upper() if code else None}
     )
 
@@ -77,12 +77,12 @@ def register_team(
 
     if not active_session:
         return templates.TemplateResponse(
-            "register.html",
+            "biscuit_factory/register.html",
             {"request": request, "error": "Join code not recognised. Check with your teacher."}
         )
     if active_session[2] != "setup":
         return templates.TemplateResponse(
-            "register.html",
+            "biscuit_factory/register.html",
             {"request": request, "error": "Registration is closed. The simulation has already started."}
         )
 
@@ -94,7 +94,7 @@ def register_team(
     if cursor.fetchone():
         conn.close()
         return templates.TemplateResponse(
-            "register.html",
+            "biscuit_factory/register.html",
             {"request": request, "error": "Team name already exists."}
         )
 
@@ -243,7 +243,7 @@ def teacher_dashboard(
     join_code = active_session[5] if active_session else None
 
     return templates.TemplateResponse(
-        "teacher_dashboard.html",
+        "biscuit_factory/teacher_dashboard.html",
         {
             "request": request,
             "teams": teams,
@@ -356,7 +356,7 @@ def team_dashboard(request: Request, user=Depends(get_current_user)):
             process_limits.append(pp.get_process_limits(line["process_type"]))
 
     return templates.TemplateResponse(
-        "team_dashboard.html",
+        "biscuit_factory/team_dashboard.html",
         {
             "request": request,
             "team_name": team_name,
@@ -500,7 +500,7 @@ async def submit_decisions(request: Request, user=Depends(get_current_user)):
             process_limits.append(pp.get_process_limits(line["process_type"]))
         conn.close()
         return templates.TemplateResponse(
-            "team_dashboard.html",
+            "biscuit_factory/team_dashboard.html",
             {
                 "request": request,
                 "user": user,
@@ -675,7 +675,7 @@ def factory_setup_page(request: Request, user=Depends(get_current_user)):
 
     conn.close()
     return templates.TemplateResponse(
-        "factory_setup.html",
+        "biscuit_factory/factory_setup.html",
         {"request": request, "team_name": team_name, "user": user}
     )
 
@@ -748,7 +748,7 @@ def submit_factory_setup(
         else:
             friendly_messages.append(str(message))
         return templates.TemplateResponse(
-            "factory_setup.html",
+            "biscuit_factory/factory_setup.html",
             {"request": request, "team_name": team_name, "user": user,
              "errors": friendly_messages, "form_data": setup_data}
         )
