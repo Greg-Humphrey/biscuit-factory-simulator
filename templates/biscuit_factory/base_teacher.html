@@ -1,17 +1,39 @@
 {% extends "base.html" %}
 
 {% block nav %}
-<nav class="navbar">
-    <div class="nav-left">
-        <a href="/hub" style="font-weight:bold; font-size:16px;">Simprentice</a>
-    </div>
-    <div class="nav-right">
+<nav class="platform-nav">
+    <a class="brand" href="/">Simprentice</a>
+    <div class="user-area">
         {% if user %}
-            <span class="logged-in">👩‍🏫 {{ user.team_name }}</span>
-            <a href="/logout" class="btn small">Sign out</a>
+            <span class="user-badge">{{ user.team_name }}</span>
+            <a href="/logout">Sign out</a>
         {% endif %}
     </div>
 </nav>
+{% endblock %}
+
+{% block page_content %}
+<div class="sim-bg sim-bg-biscuit">
+    <div class="sim-box">
+
+        <nav class="sim-inner-nav">
+            <div style="display:flex; align-items:center;">
+                <a href="/hub">← Simulator Hub</a>
+                <span class="sim-title">🏭 Biscuit Factory</span>
+            </div>
+            <div style="display:flex; align-items:center;">
+                {% if user %}
+                    <span class="team-name">👩‍🏫 {{ user.team_name }}</span>
+                {% endif %}
+            </div>
+        </nav>
+
+        <div class="sim-content">
+            {% block content %}{% endblock %}
+        </div>
+
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

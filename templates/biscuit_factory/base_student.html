@@ -1,17 +1,36 @@
 {% extends "base.html" %}
 
 {% block nav %}
-<nav class="navbar">
-    <div class="nav-left">
-        <span style="font-weight:bold;">🏭 Biscuit Factory Simulator</span>
-    </div>
-    <div class="nav-right">
-        {% if user %}
-            <span class="logged-in">🧑‍🤝‍🧑 {{ user.team_name }}</span>
-            <a href="/logout" class="btn small">Logout</a>
-        {% endif %}
+<nav class="platform-nav">
+    <a class="brand" href="/">Simprentice</a>
+    <div class="user-area">
+        <a class="home-icon" href="/" title="Homepage">🏠</a>
     </div>
 </nav>
+{% endblock %}
+
+{% block page_content %}
+<div class="sim-bg sim-bg-biscuit">
+    <div class="sim-box">
+
+        <nav class="sim-inner-nav">
+            <div style="display:flex; align-items:center;">
+                <span class="sim-title">🏭 Biscuit Factory Simulator</span>
+            </div>
+            <div style="display:flex; align-items:center;">
+                {% if user %}
+                    <span class="team-name">🧑‍🤝‍🧑 {{ user.team_name }}</span>
+                    <a href="/logout" class="btn small">Logout</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <div class="sim-content">
+            {% block content %}{% endblock %}
+        </div>
+
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

@@ -24,6 +24,116 @@ h2 {
 }
 
 /* ==============================
+   PLATFORM NAV (outer top bar)
+================================ */
+
+.platform-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.platform-nav .brand {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2c7be5;
+    text-decoration: none;
+}
+
+.platform-nav .user-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px;
+}
+
+.platform-nav .user-area a {
+    color: #2c7be5;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.platform-nav .user-area a:hover { text-decoration: underline; }
+
+.user-badge {
+    background: #eef4ff;
+    color: #2c7be5;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.home-icon {
+    font-size: 20px;
+    text-decoration: none;
+    line-height: 1;
+}
+
+/* ==============================
+   SIMULATION BOX
+================================ */
+
+.sim-bg {
+    padding: 16px;
+    box-sizing: border-box;
+    min-height: calc(100vh - 52px);
+}
+
+.sim-bg-biscuit {
+    background-color: #f0e6d3;
+}
+
+.sim-box {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    overflow: hidden;
+    min-height: calc(100vh - 84px);
+}
+
+.sim-inner-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    background-color: #1e293b;
+    color: white;
+}
+
+.sim-inner-nav a {
+    color: white;
+    text-decoration: none;
+    font-size: 14px;
+    margin-left: 16px;
+}
+
+.sim-inner-nav a:hover { opacity: 0.8; }
+
+.sim-inner-nav .sim-title {
+    font-weight: bold;
+    font-size: 16px;
+    color: white;
+    margin-left: 16px;
+}
+
+.sim-inner-nav .team-name {
+    color: #cbd5e1;
+    font-size: 14px;
+    margin-right: 8px;
+}
+
+.sim-content {
+    padding: 28px 32px;
+}
+
+/* ==============================
    NAVBAR
 ================================ */
 
